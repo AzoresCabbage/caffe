@@ -13,7 +13,14 @@
 #include <string>
 #include <vector>
 
+
+#ifdef CPU_ONLY
+
+#else
 #include "gpu/mxGPUArray.h"
+#pragma comment(lib, "gpu.lib")
+#endif
+
 #include "mex.h"
 
 #include "caffe/caffe.hpp"
@@ -66,6 +73,7 @@ static void mx_mat_to_blob(const mxArray* mx_mat, Blob<float>* blob,
     WhichMemory data_or_diff) {
 
   const float* mat_mem_ptr = NULL;
+#ifndef CPU_ONLY
   mxGPUArray const *mx_mat_gpu;
   if (mxIsGPUArray(mx_mat)) {
     mxInitGPU();
@@ -79,6 +87,12 @@ static void mx_mat_to_blob(const mxArray* mx_mat, Blob<float>* blob,
       "number of elements in target blob doesn't match that in input mxArray");
     mat_mem_ptr = reinterpret_cast<const float*>(mxGetData(mx_mat));
   }
+#else
+  mxCHECK(blob->count() == mxGetNumberOfElements(mx_mat),
+	  "number of elements in target blob doesn't match that in input mxArray");
+  mat_mem_ptr = reinterpret_cast<const float*>(mxGetData(mx_mat));
+#endif
+
   float* blob_mem_ptr = NULL;
   switch (Caffe::mode()) {
   case Caffe::CPU:
@@ -86,6 +100,9 @@ static void mx_mat_to_blob(const mxArray* mx_mat, Blob<float>* blob,
         blob->mutable_cpu_data() : blob->mutable_cpu_diff());
     break;
   case Caffe::GPU:
+#ifdef CPU_ONLY
+	  NO_GPU;
+#endif
     blob_mem_ptr = (data_or_diff == DATA ?
         blob->mutable_gpu_data() : blob->mutable_gpu_diff());
     break;
@@ -94,9 +111,11 @@ static void mx_mat_to_blob(const mxArray* mx_mat, Blob<float>* blob,
   }
   caffe_copy(blob->count(), mat_mem_ptr, blob_mem_ptr);
 
+#ifndef CPU_ONLY
   if (mxIsGPUArray(mx_mat)) {
     mxGPUDestroyGPUArray(mx_mat_gpu);
   }
+#endif
 }
 
 // Copy Blob data or diff to matlab array
@@ -487,9 +506,15 @@ static void blob_get_data(MEX_ARGS) {
 
 // Usage: caffe_('blob_set_data', hBlob, new_data)
 static void blob_set_data(MEX_ARGS) {
+#ifndef CPU_ONLY
   mxCHECK(nrhs == 2 && mxIsStruct(prhs[0]) &&
     (mxIsSingle(prhs[1]) || mxIsGPUArray(prhs[1])),
       "Usage: caffe_('blob_set_data', hBlob, new_data)");
+#else
+	mxCHECK(nrhs == 2 && mxIsStruct(prhs[0]) &&
+		mxIsSingle(prhs[1]),
+		"Usage: caffe_('blob_set_data', hBlob, new_data)");
+#endif
   Blob<float>* blob = handle_to_ptr<Blob<float> >(prhs[0]);
   mx_mat_to_blob(prhs[1], blob, DATA);
 }

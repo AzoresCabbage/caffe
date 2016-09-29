@@ -95,16 +95,47 @@ classdef Net < handle
       CHECK(ischar(blob_name), 'blob_name must be a string');
       blob = self.blob_vec(self.name2blob_index(blob_name));
     end
+    
+    % modified by Yujie Wang
+    function featmaps = get_featmaps(self)
+        featmaps = cell(length(self.blob_names), 2);
+        for i=1:length(self.blob_names)
+            featmaps{i,1} = self.blob_names{i,1};
+            featmaps{i,2} = self.blob_vec(i).get_data();
+        end
+    end
+    
     function blob = params(self, layer_name, blob_index)
       CHECK(ischar(layer_name), 'layer_name must be a string');
       CHECK(isscalar(blob_index), 'blob_index must be a scalar');
       blob = self.layer_vec(self.name2layer_index(layer_name)).params(blob_index);
     end
+    % modified by Yujie Wang
+    function weight = get_weights(self)
+        weight = cell(size(self.layer_vec, 2), 2);
+        for i=1:size(self.layer_vec, 2)
+            weight{i,1} = self.layer_names{i,1};
+            for j=1:size(self.layer_vec(1,i).params, 2)
+                weight{i,2}{j,1} = self.layer_vec(1,i).params(1,j).get_data();
+            end
+        end
+    end
+    
     function set_params_data(self, layer_name, blob_index, data)
       CHECK(ischar(layer_name), 'layer_name must be a string');
       CHECK(isscalar(blob_index), 'blob_index must be a scalar');
       self.layer_vec(self.name2layer_index(layer_name)).set_params_data(blob_index, data);
     end
+    
+    % modified by Yujie Wang
+    function set_weights(self, data)
+        for i=1:size(self.layer_vec, 2)
+            for j=1:size(self.layer_vec(1,i).params, 2)
+                self.layer_vec(1,i).params(1,j).set_data(data{i,2}{j,1});
+            end
+        end
+    end
+    
     function forward_prefilled(self)
       caffe_('net_forward', self.hNet_self);
     end
