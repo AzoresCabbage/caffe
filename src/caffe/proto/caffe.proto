@@ -306,7 +306,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 151 (last added: box_annotator_ohem_param)
+// LayerParameter next available layer-specific ID: 152 (last added: center_loss_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -366,6 +366,7 @@ message LayerParameter {
   optional ConcatParameter concat_param = 104;
   optional ContrastiveLossParameter contrastive_loss_param = 105;
   optional ConvolutionParameter convolution_param = 106;
+  optional CenterLossParameter center_loss_param = 151;
   optional CropParameter crop_param = 144;
   optional DataParameter data_param = 107;
   optional DropoutParameter dropout_param = 108;
@@ -620,6 +621,17 @@ message ConvolutionParameter {
   // ignored and the ND implementation will be used.)
   optional bool force_nd_im2col = 17 [default = false];
 }
+
+
+message CenterLossParameter {
+  optional uint32 num_output = 1; // The number of outputs for the layer
+  optional FillerParameter center_filler = 2; // The filler for the centers
+  // The first axis to be lumped into a single inner product computation;
+  // all preceding axes are retained in the output.
+  // May be negative to index from the end (e.g., -1 for the last axis).
+  optional int32 axis = 3 [default = 1];
+}
+
 
 message CropParameter {
   // To crop, elements of the first bottom are selected to fit the dimensions

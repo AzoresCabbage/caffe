@@ -102,3 +102,5 @@ MANIFEST-*
 *.opensdf
 *.pdb
 *.props
+*.db
+*.ipch
