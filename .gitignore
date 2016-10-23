@@ -104,3 +104,4 @@ MANIFEST-*
 *.props
 *.db
 *.ipch
+face_example/extractDeepFeature.m
