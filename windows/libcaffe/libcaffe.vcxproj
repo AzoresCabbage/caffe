@@ -219,6 +219,7 @@
     <ClInclude Include="..\..\include\caffe\layers\batch_reindex_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\bias_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\bnll_layer.hpp" />
+    <ClInclude Include="..\..\include\caffe\layers\box_annotator_ohem_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\center_loss_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\concat_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\contrastive_loss_layer.hpp" />
@@ -254,6 +255,7 @@
     <ClInclude Include="..\..\include\caffe\layers\log_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\loss_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\lrn_layer.hpp" />
+    <ClInclude Include="..\..\include\caffe\layers\lstm_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\memory_data_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\multinomial_logistic_loss_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\mvn_layer.hpp" />
@@ -264,17 +266,22 @@
     <ClInclude Include="..\..\include\caffe\layers\prelu_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\psroi_pooling_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\python_layer.hpp" />
+    <ClInclude Include="..\..\include\caffe\layers\recurrent_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\reduction_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\relu_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\reshape_layer.hpp" />
+    <ClInclude Include="..\..\include\caffe\layers\rnn_layer.hpp" />
+    <ClInclude Include="..\..\include\caffe\layers\roi_pooling_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\scale_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\sigmoid_cross_entropy_loss_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\sigmoid_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\silence_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\slice_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\smooth_l1_loss_layer.hpp" />
+    <ClInclude Include="..\..\include\caffe\layers\smooth_l1_loss_ohem_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\softmax_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\softmax_loss_layer.hpp" />
+    <ClInclude Include="..\..\include\caffe\layers\softmax_loss_ohem_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\split_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\spp_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\tanh_layer.hpp" />
@@ -366,59 +373,165 @@
     <CudaCompile Include="..\..\src\caffe\util\math_functions.cu" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\src\caffe\layers\absval_layer.cu" />
-    <None Include="..\..\src\caffe\layers\base_data_layer.cu" />
-    <None Include="..\..\src\caffe\layers\batch_norm_layer.cu" />
-    <None Include="..\..\src\caffe\layers\batch_reindex_layer.cu" />
-    <None Include="..\..\src\caffe\layers\bias_layer.cu" />
-    <None Include="..\..\src\caffe\layers\bnll_layer.cu" />
-    <None Include="..\..\src\caffe\layers\center_loss_layer.cu" />
-    <None Include="..\..\src\caffe\layers\concat_layer.cu" />
-    <None Include="..\..\src\caffe\layers\contrastive_loss_layer.cu" />
-    <None Include="..\..\src\caffe\layers\conv_layer.cu" />
-    <None Include="..\..\src\caffe\layers\crop_layer.cu" />
-    <None Include="..\..\src\caffe\layers\cudnn_conv_layer.cu" />
-    <None Include="..\..\src\caffe\layers\cudnn_lcn_layer.cu" />
-    <None Include="..\..\src\caffe\layers\cudnn_lrn_layer.cu" />
-    <None Include="..\..\src\caffe\layers\cudnn_pooling_layer.cu" />
-    <None Include="..\..\src\caffe\layers\cudnn_relu_layer.cu" />
-    <None Include="..\..\src\caffe\layers\cudnn_sigmoid_layer.cu" />
-    <None Include="..\..\src\caffe\layers\cudnn_softmax_layer.cu" />
-    <None Include="..\..\src\caffe\layers\cudnn_tanh_layer.cu" />
-    <None Include="..\..\src\caffe\layers\deconv_layer.cu" />
-    <None Include="..\..\src\caffe\layers\dropout_layer.cu" />
-    <None Include="..\..\src\caffe\layers\eltwise_layer.cu" />
-    <None Include="..\..\src\caffe\layers\elu_layer.cu" />
-    <None Include="..\..\src\caffe\layers\embed_layer.cu" />
-    <None Include="..\..\src\caffe\layers\euclidean_loss_layer.cu" />
-    <None Include="..\..\src\caffe\layers\exp_layer.cu" />
-    <None Include="..\..\src\caffe\layers\filter_layer.cu" />
-    <None Include="..\..\src\caffe\layers\hdf5_data_layer.cu" />
-    <None Include="..\..\src\caffe\layers\hdf5_output_layer.cu" />
-    <None Include="..\..\src\caffe\layers\im2col_layer.cu" />
-    <None Include="..\..\src\caffe\layers\inner_product_layer.cu" />
-    <None Include="..\..\src\caffe\layers\log_layer.cu" />
-    <None Include="..\..\src\caffe\layers\lrn_layer.cu" />
-    <None Include="..\..\src\caffe\layers\lstm_unit_layer.cu" />
-    <None Include="..\..\src\caffe\layers\mvn_layer.cu" />
-    <None Include="..\..\src\caffe\layers\pooling_layer.cu" />
-    <None Include="..\..\src\caffe\layers\power_layer.cu" />
-    <None Include="..\..\src\caffe\layers\prelu_layer.cu" />
-    <None Include="..\..\src\caffe\layers\recurrent_layer.cu" />
-    <None Include="..\..\src\caffe\layers\reduction_layer.cu" />
-    <None Include="..\..\src\caffe\layers\relu_layer.cu" />
-    <None Include="..\..\src\caffe\layers\roi_pooling_layer.cu" />
-    <None Include="..\..\src\caffe\layers\scale_layer.cu" />
-    <None Include="..\..\src\caffe\layers\sigmoid_cross_entropy_loss_layer.cu" />
-    <None Include="..\..\src\caffe\layers\sigmoid_layer.cu" />
-    <None Include="..\..\src\caffe\layers\silence_layer.cu" />
-    <None Include="..\..\src\caffe\layers\slice_layer.cu" />
-    <None Include="..\..\src\caffe\layers\softmax_layer.cu" />
-    <None Include="..\..\src\caffe\layers\softmax_loss_layer.cu" />
-    <None Include="..\..\src\caffe\layers\split_layer.cu" />
-    <None Include="..\..\src\caffe\layers\tanh_layer.cu" />
-    <None Include="..\..\src\caffe\layers\threshold_layer.cu" />
-    <None Include="..\..\src\caffe\layers\tile_layer.cu" />
+    <CudaCompile Include="..\..\src\caffe\layers\absval_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\base_data_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\batch_norm_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\batch_reindex_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\bias_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\bnll_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\center_loss_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\concat_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\contrastive_loss_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\conv_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\crop_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\cudnn_conv_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\cudnn_lcn_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\cudnn_lrn_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\cudnn_pooling_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\cudnn_relu_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\cudnn_sigmoid_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\cudnn_softmax_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\cudnn_tanh_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\deconv_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\dropout_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\eltwise_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\elu_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\embed_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\euclidean_loss_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\exp_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\filter_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\hdf5_data_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\hdf5_output_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\im2col_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\inner_product_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\log_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\lrn_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\lstm_unit_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\mvn_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\pooling_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\power_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\prelu_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\recurrent_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\reduction_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\relu_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\roi_pooling_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\scale_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\sigmoid_cross_entropy_loss_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\sigmoid_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\silence_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\slice_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\softmax_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\softmax_loss_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\split_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\tanh_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\threshold_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\tile_layer.cu">
+      <FileType>Document</FileType>
+    </CudaCompile>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

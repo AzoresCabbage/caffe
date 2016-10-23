@@ -45,6 +45,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <DisableSpecificWarnings>4003</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Program Files\MATLAB\R2016a\toolbox\distcomp\gpu\extern\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <PreBuildEvent>
       <Command>"$(ScriptsDir)\MatlabPreBuild.cmd" "$(SolutionDir)" "$(OutDir)"</Command>
