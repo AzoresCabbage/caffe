@@ -50,6 +50,9 @@ classdef Solver < handle
     function solve(self)
       caffe_('solver_solve', self.hSolver_self);
     end
+    function snapshot(self)
+      caffe_('solver_snapshot', self.hSolver_self);
+    end
     function step(self, iters)
       CHECK(isscalar(iters) && iters > 0, 'iters must be positive integer');
       iters = double(iters);
