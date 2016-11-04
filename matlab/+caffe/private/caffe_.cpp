@@ -12,6 +12,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <thread>
 
 
 #ifdef CPU_ONLY
@@ -49,9 +50,12 @@ void mxCHECK_FILE_EXIST(const char* file) {
   f.close();
 }
 
-// The pointers to caffe::Solver and caffe::Net instances
-static vector<shared_ptr<Solver<float> > > solvers_;
+// The pointers to caffe::P2PSync caffe::Solver and caffe::Net instances
+// solver can support multi-GPU, while net cannot support
+static vector<shared_ptr<P2PSync<float> > > sync_solvers_;
+static vector<shared_ptr<Solver<float> > > root_solvers_;
 static vector<shared_ptr<Net<float> > > nets_;
+static vector<vector<int> > gpus_;
 // init_key is generated at the beginning and everytime you call reset
 #ifndef _MSC_VER  // We are not using MSVC.
 static double init_key = static_cast<double>(caffe_rng_rand());
@@ -246,7 +250,7 @@ static void get_solver(MEX_ARGS) {
   ReadSolverParamsFromTextFileOrDie(solver_file, &solver_param);
   shared_ptr<Solver<float> > solver(
       SolverRegistry<float>::CreateSolver(solver_param));
-  solvers_.push_back(solver);
+  root_solvers_.push_back(solver);
   plhs[0] = ptr_to_handle<Solver<float> >(solver.get());
   mxFree(solver_file);
 }
@@ -570,6 +574,10 @@ static void set_mode_gpu(MEX_ARGS) {
 static void set_device(MEX_ARGS) {
   mxCHECK(nrhs == 1 && mxIsDouble(prhs[0]),
       "Usage: caffe_('set_device', device_id)");
+  int rows = mxGetM(prhs[0]);
+  int cols = mxGetN(prhs[0]);
+  mxCHECK(rows == 1 || cols == 1, "device_id must be a number or a vector");
+
   int device_id = static_cast<int>(mxGetScalar(prhs[0]));
   Caffe::SetDevice(device_id);
 }
@@ -585,8 +593,8 @@ static void reset(MEX_ARGS) {
   mxCHECK(nrhs == 0, "Usage: caffe_('reset')");
   // Clear solvers and stand-alone nets
   mexPrintf("Cleared %d solvers and %d stand-alone nets\n",
-      solvers_.size(), nets_.size());
-  solvers_.clear();
+      root_solvers_.size(), nets_.size());
+  root_solvers_.clear();
   nets_.clear();
   // Generate new init_key, so that handles created before becomes invalid
   init_key = static_cast<double>(caffe_rng_rand());
