@@ -148,6 +148,7 @@
     <ClCompile Include="..\..\src\caffe\layers\multinomial_logistic_loss_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\mvn_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\neuron_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\layers\normalize_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\parameter_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\pooling_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\power_layer.cpp" />
@@ -174,6 +175,7 @@
     <ClCompile Include="..\..\src\caffe\layers\tanh_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\threshold_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\tile_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\layers\triplet_loss_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\window_data_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layer_factory.cpp" />
     <ClCompile Include="..\..\src\caffe\net.cpp" />
@@ -260,6 +262,7 @@
     <ClInclude Include="..\..\include\caffe\layers\multinomial_logistic_loss_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\mvn_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\neuron_layer.hpp" />
+    <ClInclude Include="..\..\include\caffe\layers\normalize_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\parameter_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\pooling_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\power_layer.hpp" />
@@ -287,6 +290,7 @@
     <ClInclude Include="..\..\include\caffe\layers\tanh_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\threshold_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\tile_layer.hpp" />
+    <ClInclude Include="..\..\include\caffe\layers\triplet_loss_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\window_data_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layer_factory.hpp" />
     <ClInclude Include="..\..\include\caffe\net.hpp" />
@@ -380,6 +384,7 @@
     <CudaCompile Include="..\..\src\caffe\layers\roi_pooling_layer.cu" />
     <CudaCompile Include="..\..\src\caffe\layers\recurrent_layer.cu" />
     <CudaCompile Include="..\..\src\caffe\layers\center_loss_layer.cu" />
+    <CudaCompile Include="..\..\src\caffe\layers\triplet_loss_layer.cu" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\src\caffe\layers\absval_layer.cu" />
@@ -435,7 +440,11 @@
     <None Include="..\..\src\caffe\layers\tanh_layer.cu" />
     <None Include="..\..\src\caffe\layers\threshold_layer.cu" />
     <None Include="..\..\src\caffe\layers\tile_layer.cu" />
+    <None Include="..\..\src\caffe\layers\triplet_loss_layer.cu" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="..\..\src\caffe\layers\normalize_layer.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Import Project="$(SolutionDir)\CommonSettings.targets" />
