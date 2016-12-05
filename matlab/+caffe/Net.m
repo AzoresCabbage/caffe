@@ -128,10 +128,16 @@ classdef Net < handle
     end
     
     % modified by Yujie Wang
+        % modified by Yujie Wang
     function set_weights(self, data)
-        for i=1:size(self.layer_vec, 2)
-            for j=1:size(self.layer_vec(1,i).params, 2)
-                self.layer_vec(1,i).params(1,j).set_data(data{i,2}{j,1});
+        for iter=1:size(data, 1)
+            for i=1:size(self.layer_vec, 2)
+                name = self.layer_names{i,1};
+                if strcmp(name, data{iter,1})
+                    for j=1:size(self.layer_vec(1,i).params, 2)
+                        self.layer_vec(1,i).params(1,j).set_data(data{iter,2}{j,1});
+                    end
+                end
             end
         end
     end
