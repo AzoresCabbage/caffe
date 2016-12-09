@@ -311,7 +311,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 154 (last added: roi_warping_param)
+// LayerParameter next available layer-specific ID: 155 (last added: conv_gru_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -381,6 +381,7 @@ message LayerParameter {
   optional EmbedParameter embed_param = 137;
   optional ExpParameter exp_param = 111;
   optional FlattenParameter flatten_param = 135;
+  optional ConvGRUParameter conv_gru_param = 154;
   optional HDF5DataParameter hdf5_data_param = 112;
   optional HDF5OutputParameter hdf5_output_param = 113;
   optional HingeLossParameter hinge_loss_param = 114;
@@ -772,6 +773,14 @@ message FlattenParameter {
   // May be negative to index from the end (e.g., the default -1 for the last
   // axis).
   optional int32 end_axis = 2 [default = -1];
+}
+
+message ConvGRUParameter {
+  optional uint32 num_output = 1; // The number of outputs for the layer
+  optional float clipping_threshold = 2 [default = 0.0];
+  optional FillerParameter weight_filler = 3; // The filler for weight
+  optional FillerParameter bias_filler = 4; // The filler for the bias
+  optional bool forward_direction = 5 [default = true]; //used for bidirectional rnn
 }
 
 // Message that stores parameters used by HDF5DataLayer
