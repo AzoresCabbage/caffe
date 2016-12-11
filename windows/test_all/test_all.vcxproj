@@ -73,23 +73,10 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\src\caffe\test\test_accuracy_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_argmax_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_batch_norm_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_batch_reindex_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_benchmark.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_bias_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_blob.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_caffe_main.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_common.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_concat_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_contrastive_loss_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_convolution_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_conv_gru_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_crop_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_data_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_data_transformer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_db.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_deconvolution_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_dummy_data_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_eltwise_layer.cpp" />
@@ -99,15 +86,8 @@
     <ClCompile Include="..\..\src\caffe\test\test_filter_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_flatten_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_gradient_based_solver.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_hdf5data_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_hdf5_output_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_hinge_loss_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_im2col_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_image_data_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_infogain_loss_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_inner_product_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_internal_thread.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_io.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_layer_factory.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_lrn_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_math_functions.cpp" />
@@ -131,13 +111,7 @@
     <ClCompile Include="..\..\src\caffe\test\test_softmax_with_loss_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_solver.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_solver_factory.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_split_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_spp_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_stochastic_pooling.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_syncedmem.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_tanh_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_threshold_layer.cpp" />
-    <ClCompile Include="..\..\src\caffe\test\test_tile_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_upgrade_proto.cpp" />
     <ClCompile Include="..\..\src\caffe\test\test_util_blas.cpp" />
     <ClCompile Include="..\..\src\gtest\gtest-all.cpp" />

@@ -30,24 +30,23 @@ namespace caffe {
 		const vector<Blob<Dtype>*>& top) {
 		clipping_threshold_ = this->layer_param_.conv_gru_param().clipping_threshold();
 		// Input shape should like this:
-		// btm[0] : seq length;
-		// btm[1] : seq num;
-		// btm[2] : channel; 
-		// btm[3] : H;
-		// btm[4] : W
+		// btm[0] : seq length * seq num(1)
+		// btm[1] : channel; 
+		// btm[2] : H;
+		// btm[3] : W
 		T_ = bottom[0]->shape(0); // seq length
-		N_ = bottom[0]->shape(1); // seq num
 		H_ = this->layer_param_.conv_gru_param().num_output(); // number of hidden units channels
-		C_ = bottom[0]->shape(2); // input channels
+		C_ = bottom[0]->shape(1); // input channels
 		forward_direction_ = this->layer_param_.conv_gru_param().forward_direction();
+		N_ = 1; // seq num(1)
 
 		vector<int> unit_shape;
-		for (int i = 1; i < bottom[0]->shape().size(); ++i) {
+		for (int i = 0; i < bottom[0]->shape().size(); ++i) {
 			unit_shape.push_back(bottom[0]->shape()[i]);
 		}
-		unit_shape[1] = H_;
+		unit_shape[0] = T_;
 		// All units' shape in convGRU should like this, except input:
-		// 0: seq num
+		// 0: seq length
 		// 1: num_output
 		// 2: H
 		// 3: W
@@ -72,7 +71,7 @@ namespace caffe {
 		input_conv_param->clear_stride();
 		input_conv_param->clear_pad();
 		input_conv_param->add_pad(dilation * ((kernel_size - 1) / 2));
-		input_conv_param->set_axis(2); // see input shape above
+		input_conv_param->set_axis(1); // see input shape above
 		//input X should contribute to reset_gate(R), update_gate(Z) and candidate_act in order
 		input_conv_param->set_num_output(H_ * 3);
 
@@ -179,16 +178,16 @@ namespace caffe {
 		}
 
 		T_ = bottom[0]->shape(0); // seq len
-		spatial_dims = bottom[0]->count(3); //H*W
+		spatial_dims = bottom[0]->count(2); //H*W
 		// Figure out the dimensions
-		CHECK_EQ(bottom[0]->shape(2), C_) << "Input size "
+		CHECK_EQ(bottom[0]->shape(1), C_) << "Input size "
 			"incompatible with inner product parameters.";
 
 		vector<int> unit_shape;
-		for (int i = 1; i < bottom[0]->shape().size(); ++i) {
+		for (int i = 0; i < bottom[0]->shape().size(); ++i) {
 			unit_shape.push_back(bottom[0]->shape()[i]);
 		}
-		unit_shape[1] = H_;
+		unit_shape[0] = T_;
 		h_0_.Reshape(unit_shape);
 		hidden_.Reshape(unit_shape);
 		hidden_reset_.Reshape(unit_shape);
@@ -197,15 +196,11 @@ namespace caffe {
 		for (int i = 0; i < bottom[0]->shape().size(); ++i) {
 			original_top_shape.push_back(bottom[0]->shape()[i]);
 		}
-		original_top_shape[2] = H_;
 		top[0]->Reshape(original_top_shape);
 
-		conv_input_layer_->
-			Reshape(conv_input_bottom_vec_, conv_input_top_vec_);
-		conv_hidden_layer_->
-			Reshape(conv_hidden_bottom_vec_, conv_hidden_top_vec_);
-		conv_tmp_hidden_layer_->
-			Reshape(conv_tmp_hidden_bottom_vec_, conv_tmp_hidden_top_vec_);
+		conv_input_layer_->Reshape(conv_input_bottom_vec_, conv_input_top_vec_);
+		conv_hidden_layer_->Reshape(conv_hidden_bottom_vec_, conv_hidden_top_vec_);
+		conv_tmp_hidden_layer_->Reshape(conv_tmp_hidden_bottom_vec_, conv_tmp_hidden_top_vec_);
 	}
 
 	template <typename Dtype>

@@ -20,7 +20,7 @@ namespace caffe {
 		typedef typename TypeParam::Dtype Dtype;
 	protected:
 		GRULayerTest()
-			: blob_bottom_(new Blob<Dtype>(vector<int>{ 3, 2, 2, 2, 2 })),
+			: blob_bottom_(new Blob<Dtype>(vector<int>{ 2, 50, 4, 4 })),
 			blob_top_(new Blob<Dtype>()) {
 			// fill the values
 			FillerParameter filler_param;
@@ -49,7 +49,7 @@ namespace caffe {
 			sizeof(Dtype) == 4 || IS_VALID_CUDA) {
 			LayerParameter layer_param;
 			ConvGRUParameter* gru_parm = layer_param.mutable_conv_gru_param();
-			gru_parm->set_num_output(2);
+			gru_parm->set_num_output(50);
 			ConvolutionParameter* conv_param = layer_param.mutable_convolution_param();
 			conv_param->add_kernel_size(3);
 			conv_param->mutable_weight_filler()->set_type("uniform");
@@ -57,6 +57,7 @@ namespace caffe {
 			conv_param->mutable_weight_filler()->set_max(0.01);
 			conv_param->mutable_bias_filler()->set_type("constant");
 			conv_param->mutable_bias_filler()->set_value(0);
+			conv_param->add_pad(1);
 			this->blob_bottom_vec_.clear();
 			this->blob_bottom_vec_.push_back(this->blob_bottom_);
 			ConvGRULayer<Dtype> layer(layer_param);

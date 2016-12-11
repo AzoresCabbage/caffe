@@ -879,6 +879,8 @@
     <None Include="..\..\src\caffe\layers\roi_warping_layer.cu">
       <Filter>cu\layers</Filter>
     </None>
+    <None Include="..\..\src\caffe\layers\conv_gru_layer.cu" />
+    <None Include="..\..\src\caffe\layers\normalize_layer.cu" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="..\..\src\caffe\layers\normalize_layer.cu">
