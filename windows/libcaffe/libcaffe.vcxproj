@@ -112,6 +112,7 @@
     <ClCompile Include="..\..\src\caffe\layers\contrastive_loss_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\conv_gru_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\conv_layer.cpp" />
+    <ClCompile Include="..\..\src\caffe\layers\conv_lstm.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\crop_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\cudnn_conv_layer.cpp" />
     <ClCompile Include="..\..\src\caffe\layers\cudnn_lcn_layer.cpp" />
@@ -229,6 +230,7 @@
     <ClInclude Include="..\..\include\caffe\layers\contrastive_loss_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\conv_gru_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\conv_layer.hpp" />
+    <ClInclude Include="..\..\include\caffe\layers\conv_lstm_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\crop_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\cudnn_conv_layer.hpp" />
     <ClInclude Include="..\..\include\caffe\layers\cudnn_lcn_layer.hpp" />
@@ -452,6 +454,9 @@
     <None Include="..\..\src\caffe\layers\conv_gru_layer.cu" />
     <None Include="..\..\src\caffe\layers\normalize_layer.cu" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="..\..\src\caffe\layers\conv_lstm.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Import Project="$(SolutionDir)\CommonSettings.targets" />
