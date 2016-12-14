@@ -8,14 +8,27 @@
 #include "caffe/proto/caffe.pb.h"
 
 #include "caffe/layers/conv_layer.hpp"
-#include "caffe/layers/eltwise_layer.hpp"
 
 namespace caffe {
 
 	/**
 	* @brief Convolutional Long Short Term Memory(ConvLSTM) layer.
-	* TODO(Yujie): thorough documentation for Forward, Backward, and proto params.
+	* Formula:
+	*	I[t] = sigmoid(Wxi*X[t] + Whi*H[t-1] + Wci.*C[t-1] + bi)
+	*	F[t] = sigmoid(Wxf*X[t] + Whf*H[t-1] + Wcf.*C[t-1] + bf)
+	*	C[t] = F[t].*C[t-1] + I[t].*tanh(Wxc*X[t] + Whc*H[t-1] + bc)
+	*	O[t] = sigmoid(Wxo*X[t] + Who*H[t-1] + Wco.*C[t] + bo)
+	*	H[t] = O[t] * tanh(C[t])
+	*
+	*	*  means convolution operation
+	*   .* means Hadamard procuct
+	*	X[t] is the input feature map in time t
+	*	I[t], F[t], C[t], O[t] is the input gate, forget gate, memory cell, output gate at time t seperatly
+	* source: <Convolutional LSTM Network: A Machine Learning Approach for Precipitation Nowcasting>
 	*/
+
+	//TODO(Yujie) : thorough documentation for Forward, Backward, and proto params.
+	//TODO(Yujie) : support multi sequence in a single mini batch
 	template <typename Dtype>
 	class ConvLSTMLayer : public Layer<Dtype> {
 	public:
@@ -45,33 +58,36 @@ namespace caffe {
 		int seq_len_; // number units of single sequence
 		int seq_num_; // number sequences
 		int num_output_; // number of output channels
-		int spatial_dims; // Height x Width
+		int spatial_dims_; // Height x Width
 
-		Blob<Dtype> H_0_; // init hidden activation value
-		Blob<Dtype> C_0_; // init memory cell activation value 
+		Blob<Dtype> H_0_; // init hidden activation value, 1xCxHxW
+		Blob<Dtype> C_0_; // init memory cell activation value , 1xCxHxW
 
-		// conv layer for input x with bias term as Bi, Bf, Bc, Bo
-		shared_ptr<ConvolutionLayer<Dtype>> conv_x_layer_;
-		Blob<Dtype> conv_x_top_blob_;  // gate values before nonlinearity, also is the conv_x_top_vec_ blob
-		vector<Blob<Dtype>*> conv_x_bottom_vec_; // X[t]
+		shared_ptr<ConvolutionLayer<Dtype>> conv_x_layer_; // conv layer for input X with bias term as bi, bf, bc, bo
+		Blob<Dtype> conv_x_top_blob_; // values that after convolution operation in X[1-t]
+		vector<Blob<Dtype>*> conv_x_btm_vec_; // X[1-t]: bottom[0] i.e. input feature map of entire seq
 		vector<Blob<Dtype>*> conv_x_top_vec_;
 
-		//conv layer for input h without bias term
-		shared_ptr<ConvolutionLayer<Dtype>> conv_h_layer_;
-		Blob<Dtype> conv_h_top_blob_; // gate values before nonlinearity, also is the conv_hidden_top_vec_ blob
-		vector<Blob<Dtype>*> conv_h_bottom_vec_; // H[t-1]
+		shared_ptr<ConvolutionLayer<Dtype>> conv_h_layer_; //conv layer for hidden state without bias term
+		Blob<Dtype> conv_h_btm_blob_; // H[t-1] blob, its value can be fetched from top[0]
+		Blob<Dtype> conv_h_top_blob_; // values that after convolution operation in H[t-1]
+		vector<Blob<Dtype>*> conv_h_btm_vec_; // H[t-1] blob vector
 		vector<Blob<Dtype>*> conv_h_top_vec_;
 
-		// matrix for eltwise multiply with memory cell t-1
-		Blob<Dtype> Wci_;
-		Blob<Dtype> Wcf_;
+		Blob<Dtype> conv_h_top_t_;
 
-		// eltwise layer for calc Ct two parts
-		shared_ptr<EltwiseLayer<Dtype>> c1_; // f[t] .* C[t-1]
-		shared_ptr<EltwiseLayer<Dtype>> c2_; // i[t] .* tanh(Wxi*X[t] + Whi*H[t-1] + bc)
-		Blob<Dtype> c1_top_blob_;
-		Blob<Dtype> c2_top_blob_;
+		// matrix for eltwise multiply with memory cell C[t-1], shape: 1xCxHxW
+		Blob<Dtype> Wc_;
+		Blob<Dtype> Wci_c_t_1_;
+		Blob<Dtype> Wcf_c_t_1_;
 
+		Blob<Dtype> wo_ct_tmp_; // tmp value for Wco .* C[t], shape: NxCxHxW
+
+		// intermediate variable that before activation, shape: NxCxHxW
+		Blob<Dtype> gate_i_;
+		Blob<Dtype> gate_f_;
+		Blob<Dtype> gate_c_;
+		Blob<Dtype> gate_o_;
 	};
 
 }  // namespace caffe
