@@ -9,7 +9,7 @@ namespace caffe {
 
 	template <typename Dtype>
 	inline Dtype sigmoid(Dtype x) {
-		return 1. / (1. + exp(-x));
+		return Dtype(1.) / (Dtype(1.) + exp(-x));
 	}
 
 	template <typename Dtype>
@@ -287,8 +287,8 @@ namespace caffe {
 			Dtype* wcf_t_1 = Wcf_c_t_1_.mutable_cpu_data();
 			Dtype* wc_data = Wc_.mutable_cpu_data();
 			Dtype* wci_data = wc_data;
-			Dtype* wcf_data = wc_data + spatial_dims_;
-			Dtype* wco_data = wc_data + spatial_dims_ * 2;
+			Dtype* wcf_data = wc_data + featmap_dim;
+			Dtype* wco_data = wc_data + featmap_dim * 2;
 			caffe_mul(featmap_dim, C_t_1, wci_data, wci_t_1);
 			caffe_mul(featmap_dim, C_t_1, wcf_data, wcf_t_1);
 
@@ -321,8 +321,16 @@ namespace caffe {
 			// C[t] = sigmoid(F[t]).*C[t-1] + sigmoid(I[t]).*tanh(Wxc*X[t] + Whc*H[t-1] + bc(bias term of conv_x))
 			for (int i = 0; i < featmap_dim; ++i)
 			{
+				//original
 				gate_c_t_data[i] = sigmoid(gate_f_t_data[i]) * C_t_1[i]
 					+ sigmoid(gate_i_t_data[i]) * tanh(x_wc_t[i] + h_wc_t_1[i]);
+				
+				// no sigmoid
+				//gate_c_t_data[i] = gate_f_t_data[i] * C_t_1[i]
+				//	+ gate_i_t_data[i] * tanh(x_wc_t[i] + h_wc_t_1[i]);
+
+				//gate_c_t_data[i] = gate_f_t_data[i] * C_t_1[i]
+				//	+ sigmoid(gate_i_t_data[i]) * tanh(x_wc_t[i] + h_wc_t_1[i]);
 			}
 
 			// O[t] = (Wxo*X[t] + Who*H[t-1] + Wco .* C[t] + bo(bias term of conv_x))
@@ -397,12 +405,12 @@ namespace caffe {
 			// diff: Wco.*C[t] -> C[t], Wco
 			Dtype* wc_data = Wc_.mutable_cpu_data();
 			Dtype* wci_data = wc_data;
-			Dtype* wcf_data = wc_data + spatial_dims_;
-			Dtype* wco_data = wc_data + spatial_dims_ * 2;
+			Dtype* wcf_data = wc_data + featmap_dim;
+			Dtype* wco_data = wc_data + featmap_dim * 2;
 			Dtype* wc_diff = Wc_.mutable_cpu_diff();
 			Dtype* wci_diff = wc_diff;
-			Dtype* wcf_diff = wc_diff + spatial_dims_;
-			Dtype* wco_diff = wc_diff + spatial_dims_ * 2;
+			Dtype* wcf_diff = wc_diff + featmap_dim;
+			Dtype* wco_diff = wc_diff + featmap_dim * 2;
 			for (int i = 0; i < featmap_dim; ++i)
 			{
 				x_wo_t_diff[i] = gate_o_t_diff[i];
@@ -422,6 +430,11 @@ namespace caffe {
 				gate_i_t_diff[i] = gate_c_t_diff[i] * d_sigmoid(sigmoid(gate_i_t_data[i])) * tanh(x_wc_t_data[i] + h_wc_t_1_data[i]);
 				x_wc_t_diff[i] = gate_c_t_diff[i] * sigmoid(gate_i_t_data[i]) * d_tanh(tanh(x_wc_t_data[i] + h_wc_t_1_data[i]));
 				
+				//gate_f_t_diff[i] = gate_c_t_diff[i] * C_t_1_data[i];
+				//C_t_1_diff[i] = gate_c_t_diff[i] * gate_f_t_data[i];
+				//gate_i_t_diff[i] = gate_c_t_diff[i] * tanh(x_wc_t_data[i] + h_wc_t_1_data[i]);
+				//x_wc_t_diff[i] = gate_c_t_diff[i] * gate_i_t_data[i] * d_tanh(tanh(x_wc_t_data[i] + h_wc_t_1_data[i]));
+
 				h_wc_t_1_diff[i] = x_wc_t_diff[i];
 			}
 
