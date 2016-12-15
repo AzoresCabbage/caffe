@@ -311,7 +311,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 155 (last added: conv_gru_param)
+// LayerParameter next available layer-specific ID: 156 (last added: conv_rnn_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -371,6 +371,7 @@ message LayerParameter {
   optional ConcatParameter concat_param = 104;
   optional ContrastiveLossParameter contrastive_loss_param = 105;
   optional ConvolutionParameter convolution_param = 106;
+  optional ConvRNNParameter conv_rnn_param = 155;
   optional CenterLossParameter center_loss_param = 151;
   optional CropParameter crop_param = 144;
   optional DataParameter data_param = 107;
@@ -630,6 +631,28 @@ message ConvolutionParameter {
   optional bool force_nd_im2col = 17 [default = false];
 }
 
+message ConvRNNParameter {
+	// true for channel wise convolution
+	optional bool channelwise = 1 [default = false];
+	
+	// H[t] = activation(conv(X[t]) + conv(H[t-1]))
+	optional FillerParameter x_weight_filler = 2;
+	optional FillerParameter x_bias_filler = 3;
+	optional FillerParameter h_weight_filler = 4;
+	optional FillerParameter h_bias_filler = 5;
+
+	optional int32 num_output = 6;
+
+	enum Activation {
+		DEFAULT = 0;
+		TANH = 1;
+		RELU = 2;
+	}
+	optional Activation act_type = 7 [default = DEFAULT];
+
+	// warp the feature map between time
+	optional bool warping = 8 [default = false];
+}
 
 message CenterLossParameter {
   optional uint32 num_output = 1; // The number of outputs for the layer
