@@ -80,6 +80,15 @@ namespace caffe {
 			ActivationForward<Dtype> << <CAFFE_GET_BLOCKS(featmap_dim), CAFFE_CUDA_NUM_THREADS >> >
 				(featmap_dim, act_type, H_t, H_t);
 			CUDA_POST_KERNEL_CHECK;
+
+			if (is_warping_)
+			{
+				Dtype* warp_flow = t == 0 ? warp_0_.mutable_gpu_data() : bottom[1]->mutable_gpu_data() + bottom[1]->offset(t - 1);
+				warp_btm_blob_data_.data()->set_gpu_data(H_t);
+				warp_btm_blob_flow_.data()->set_gpu_data(warp_flow);
+				warping_layer_->Forward(warp_btm_vec_, warp_top_vec_);
+				caffe_gpu_memcpy(featmap_dim, warp_top_blob_.gpu_data(), H_t);
+			}
 		}
 	}
 
@@ -104,6 +113,16 @@ namespace caffe {
 			Dtype* h_conv_diff = conv_h_top_blob_.mutable_gpu_diff();
 			Dtype* x_conv_diff_t = conv_x_top_blob_.mutable_gpu_diff() + conv_x_top_blob_.offset(t);
 			
+			if (is_warping_)
+			{
+				Dtype* warp_flow = t == 0 ? warp_0_.mutable_gpu_data() : bottom[1]->mutable_gpu_data() + bottom[1]->offset(t - 1);
+				warp_btm_blob_data_.data()->set_gpu_data(h_data_t_1);
+				warp_btm_blob_flow_.data()->set_gpu_data(warp_flow);
+				caffe_gpu_memcpy(featmap_dim, h_diff_t, warp_top_blob_.mutable_gpu_diff());
+				warping_layer_->Backward(warp_top_vec_, vector<bool>{true, true}, warp_btm_vec_);
+				caffe_gpu_memcpy(featmap_dim, warp_btm_blob_data_.gpu_diff(), h_diff_t);
+			}
+
 			ActivationBackward<Dtype> << <CAFFE_GET_BLOCKS(featmap_dim), CAFFE_CUDA_NUM_THREADS >> >
 				(featmap_dim, act_type, top_data_t, h_diff_t, x_conv_diff_t, h_conv_diff);
 			CUDA_POST_KERNEL_CHECK;

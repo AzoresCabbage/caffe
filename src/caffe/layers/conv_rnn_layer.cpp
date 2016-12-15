@@ -10,10 +10,7 @@ namespace caffe {
 	template <typename Dtype>
 	void ConvRNNLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
 		// TODO(Yujie) : support multiple sequences in one mini batch
-		// Currently, only support one bottom input: X[t]
-		CHECK_EQ(bottom.size(), 1)
-			<< "ConvRNN layer exactly have one bottom X[t]";
-
+		
 		// Input shape should like this:
 		// [0] : seq length * seq num(set as 1 now)
 		// [1] : input_channel
@@ -22,8 +19,7 @@ namespace caffe {
 		seq_num_ = 1;
 		seq_len_ = bottom[0]->shape(0);
 		spatial_dims_ = bottom[0]->count(2); //H*W
-		
-		
+
 		channelwise_conv_ = this->layer_param_.conv_rnn_param().channelwise();
 		const FillerParameter& x_weight_filler = this->layer_param_.conv_rnn_param().x_weight_filler();
 		const FillerParameter& x_bias_filler = this->layer_param_.conv_rnn_param().x_bias_filler();
@@ -33,9 +29,27 @@ namespace caffe {
 		act_type_ = this->layer_param_.conv_rnn_param().act_type();
 		is_warping_ = this->layer_param_.conv_rnn_param().warping();
 
-		if (channelwise_conv_)
-		{
+		// check
+		if (channelwise_conv_) {
 			CHECK(num_output_ == bottom[0]->channels()) << "If choose channel wise conv, the output channels must equal input channels.";
+		}
+		if (is_warping_)
+		{
+			CHECK_EQ(bottom.size(), 2)
+				<< "ConvRNN layer exactly have two bottom X[t] and warp[t] when using warpping";
+			CHECK_EQ(bottom[0]->num(), bottom[1]->num() + 1)
+				<< "constraint corrupt: In sequence, x.num == warp.num + 1";
+			CHECK_EQ(2, bottom[1]->channels())
+				<< "Warping optical flow's dimension should be 2";
+			CHECK_EQ(bottom[0]->height(), bottom[1]->height())
+				<< "height not compatible between X and Warp";
+			CHECK_EQ(bottom[0]->width(), bottom[1]->width())
+				<< "width not compatible between X and Warp";
+		}
+		else
+		{
+			CHECK_EQ(bottom.size(), 1)
+				<< "ConvRNN layer exactly have one bottom X[t] when without warpping";
 		}
 
 		if (act_type_ == 1)
@@ -102,6 +116,22 @@ namespace caffe {
 		conv_h_top_vec_.push_back(&conv_h_top_blob_);
 		conv_h_layer_.reset(new ConvolutionLayer<Dtype>(hidden_conv_param));
 		conv_h_layer_->SetUp(conv_h_btm_vec_, conv_h_top_vec_);
+
+		// Set up Warping layer if necessary
+		if (is_warping_)
+		{
+			vector<int> warp_shape{ 1, 2, H_0_.height(), H_0_.width() };
+			warping_layer_.reset(new WarpingLayer<Dtype>(this->layer_param_));
+			warp_btm_blob_flow_.Reshape(warp_shape);
+			warp_btm_blob_data_.Reshape(unit_shape);
+			warp_btm_vec_.clear();
+			warp_btm_vec_.push_back(&warp_btm_blob_data_);
+			warp_btm_vec_.push_back(&warp_btm_blob_flow_);
+			warp_top_vec_.clear();
+			warp_top_vec_.push_back(&warp_top_blob_);
+			warping_layer_->SetUp(warp_btm_vec_, warp_top_vec_);
+			warp_0_.Reshape(vector<int>{1,2,H_0_.height(),H_0_.width()});
+		}
 
 		// Check if we need to set up the weights
 		if (this->blobs_.size() > 0) {
@@ -175,6 +205,15 @@ namespace caffe {
 		unit_shape[0] = 1;
 		H_0_.Reshape(unit_shape);
 
+		if (is_warping_)
+		{
+			vector<int> warp_shape{ 1, 2, H_0_.height(), H_0_.width() };
+			warp_btm_blob_flow_.Reshape(warp_shape);
+			warp_btm_blob_data_.Reshape(unit_shape);
+			warp_0_.Reshape(warp_shape);
+			warping_layer_->Reshape(warp_btm_vec_, warp_top_vec_);
+		}
+
 		conv_x_layer_->Reshape(conv_x_btm_vec_, conv_x_top_vec_);
 		conv_h_layer_->Reshape(conv_h_btm_vec_, conv_h_top_vec_);
 	}
@@ -200,6 +239,14 @@ namespace caffe {
 			{
 				H_t[i] = act_func_->act(H_t[i]);
 			}
+			if (is_warping_)
+			{
+				Dtype* warp_flow = t == 0 ? warp_0_.mutable_cpu_data() : bottom[1]->mutable_cpu_data() + bottom[1]->offset(t - 1);
+				warp_btm_blob_data_.set_cpu_data(H_t);
+				warp_btm_blob_flow_.set_cpu_data(warp_flow);
+				warping_layer_->Forward(warp_btm_vec_, warp_top_vec_);
+				caffe_copy(featmap_dim, warp_top_blob_.cpu_data(), H_t);
+			}
 		}
 	}
 
@@ -222,6 +269,17 @@ namespace caffe {
 			Dtype* h_diff_t_1 = t == 0 ? H_0_.mutable_cpu_diff() : top_diff + top[0]->offset(t - 1);
 			Dtype* h_conv_diff = conv_h_top_blob_.mutable_cpu_diff();
 			Dtype* x_conv_diff_t = conv_x_top_blob_.mutable_cpu_diff() + conv_x_top_blob_.offset(t);
+			
+			if (is_warping_)
+			{
+				Dtype* warp_flow = t == 0 ? warp_0_.mutable_cpu_data() : bottom[1]->mutable_cpu_data() + bottom[1]->offset(t - 1);
+				warp_btm_blob_data_.set_cpu_data(h_data_t_1);
+				warp_btm_blob_flow_.set_cpu_data(warp_flow);
+				caffe_copy(featmap_dim, h_diff_t, warp_top_blob_.mutable_cpu_diff());
+				warping_layer_->Backward(warp_top_vec_, vector<bool>{true, true}, warp_btm_vec_);
+				caffe_copy(featmap_dim, warp_btm_blob_data_.cpu_diff(), h_diff_t);
+			}
+			
 			for (int i = 0; i < featmap_dim; ++i)
 			{
 				x_conv_diff_t[i] = h_diff_t[i] * act_func_->d_act(top_data_t[i]);

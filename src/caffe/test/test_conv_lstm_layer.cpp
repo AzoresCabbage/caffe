@@ -11,10 +11,6 @@
 
 namespace caffe {
 
-//#ifndef CPU_ONLY
-//	extern cudaDeviceProp CAFFE_TEST_CUDA_PROP;
-//#endif
-
 	template <typename TypeParam>
 	class ConvLSTMLayerTest : public CPUDeviceTest<TypeParam> {
 		typedef typename TypeParam::Dtype Dtype;

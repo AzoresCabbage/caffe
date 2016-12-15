@@ -15,6 +15,7 @@
 #include "caffe/proto/caffe.pb.h"
 
 #include "caffe/layers/conv_layer.hpp"
+#include "caffe/layers/warping_layer.hpp"
 
 namespace caffe {
 
@@ -124,6 +125,13 @@ namespace caffe {
 		vector<Blob<Dtype>*> conv_h_top_vec_;
 
 		Blob<Dtype> H_0_; // init hidden activation value, 1xCxHxW
+
+		shared_ptr<WarpingLayer<Dtype>> warping_layer_;
+		Blob<Dtype> warp_btm_blob_data_, warp_btm_blob_flow_; // 
+		Blob<Dtype> warp_top_blob_; // 
+		vector<Blob<Dtype>*> warp_btm_vec_;
+		vector<Blob<Dtype>*> warp_top_vec_;
+		Blob<Dtype> warp_0_;
 	};
 
 }  // namespace caffe

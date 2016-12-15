@@ -12,7 +12,7 @@
 namespace caffe {
 
 	template <typename TypeParam>
-	class ConvRNNLayerTest : public CPUDeviceTest<TypeParam> {
+	class ConvRNNLayerTest : public MultiDeviceTest<TypeParam> {
 		typedef typename TypeParam::Dtype Dtype;
 	protected:
 		ConvRNNLayerTest()
@@ -104,6 +104,38 @@ namespace caffe {
 
 		this->blob_bottom_vec_.clear();
 		this->blob_bottom_vec_.push_back(this->blob_bottom_);
+		ConvRNNLayer<Dtype> layer(layer_param);
+		GradientChecker<Dtype> checker(1e-2, 1e-3);
+		checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
+			this->blob_top_vec_, 0);
+	}
+
+	TYPED_TEST(ConvRNNLayerTest, TestWarpingGredient) {
+		typedef typename TypeParam::Dtype Dtype;
+		LayerParameter layer_param;
+		ConvolutionParameter* conv_param = layer_param.mutable_convolution_param();
+		conv_param->add_kernel_size(1);
+
+		ConvRNNParameter* conv_rnn_param = layer_param.mutable_conv_rnn_param();
+		conv_rnn_param->set_channelwise(false);
+		conv_rnn_param->mutable_x_weight_filler()->set_type("msra");
+		conv_rnn_param->mutable_x_bias_filler()->set_type("msra");
+		conv_rnn_param->mutable_h_weight_filler()->set_type("msra");
+		conv_rnn_param->mutable_h_bias_filler()->set_type("msra");
+		conv_rnn_param->set_num_output(3);
+		conv_rnn_param->set_act_type(conv_rnn_param->RELU);
+		conv_rnn_param->set_warping(true);
+		Blob<Dtype> flow(vector<int>{1, 2, 2, 2});
+		FillerParameter filler_param;
+		filler_param.set_min(-0.1);
+		filler_param.set_max(0.1);
+		UniformFiller<Dtype> filler(filler_param);
+		filler.Fill(&flow);
+
+		this->blob_bottom_vec_.clear();
+		this->blob_bottom_vec_.push_back(this->blob_bottom_);
+		this->blob_bottom_vec_.push_back(&flow);
+
 		ConvRNNLayer<Dtype> layer(layer_param);
 		GradientChecker<Dtype> checker(1e-2, 1e-3);
 		checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,

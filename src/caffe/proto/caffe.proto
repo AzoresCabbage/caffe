@@ -311,7 +311,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 156 (last added: conv_rnn_param)
+// LayerParameter next available layer-specific ID: 157 (last added: warping_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -416,6 +416,7 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;
   optional WindowDataParameter window_data_param = 129;
+  optional WarpingParameter warping_param = 156;
   optional MILDataParameter mil_data_param = 0x004d4944; //"MID"
   optional MILParameter mil_param = 0x004d494c; //"MIL"
   optional TripletLossParameter triplet_loss_param = 152;
@@ -1294,6 +1295,14 @@ message WindowDataParameter {
   optional bool cache_images = 12 [default = false];
   // append root_folder to locate images
   optional string root_folder = 13 [default = ""];
+}
+
+message WarpingParameter {
+  enum PadMethod {
+    ZERO = 0;
+    BORDER = 1;
+  }
+  optional PadMethod pad_method = 1 [default = ZERO];
 }
 
 message MILDataParameter {
