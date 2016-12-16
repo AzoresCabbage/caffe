@@ -387,6 +387,9 @@
     <ClCompile Include="..\..\src\caffe\layers\warpping_layer.cpp">
       <Filter>src\layers</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\caffe\layers\conv_lstm.cpp">
+      <Filter>src\layers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\caffe\proto\caffe.pb.h">
@@ -723,6 +726,9 @@
     <ClInclude Include="..\..\include\caffe\layers\warping_layer.hpp">
       <Filter>include\layers</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\caffe\layers\conv_lstm_layer.hpp">
+      <Filter>include\layers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -973,6 +979,9 @@
       <Filter>cu\layers</Filter>
     </CudaCompile>
     <CudaCompile Include="..\..\src\caffe\layers\warpping_layer.cu">
+      <Filter>cu\layers</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\..\src\caffe\layers\conv_lstm_layer.cu">
       <Filter>cu\layers</Filter>
     </CudaCompile>
   </ItemGroup>
