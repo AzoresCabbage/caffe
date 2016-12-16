@@ -35,14 +35,14 @@ namespace caffe {
 	}
 
 	template <typename Dtype>
-	__global__ void ActivationForward(const int nthreads, const int act_type, Dtype* src, Dtype* dst) {
+	__global__ void ActivationForward(const int nthreads, const int act_type, const Dtype* src1, const Dtype* src2, Dtype* dst) {
 		CUDA_KERNEL_LOOP(i, nthreads) {
 			if (act_type == 1)
-				dst[i] = Tanh_gpu(src[i]);
+				dst[i] = Tanh_gpu(src1[i] + src2[i]);
 			else if (act_type == 2)
-				dst[i] = Relu_gpu(src[i]);
+				dst[i] = Relu_gpu(src1[i] + src2[i]);
 			else
-				dst[i] = Sigmoid_gpu(src[i]);
+				dst[i] = Sigmoid_gpu(src1[i] + src2[i]);
 		}
 	}
 
@@ -73,12 +73,12 @@ namespace caffe {
 			Dtype* H_t = top_data + top[0]->offset(t);
 			Dtype* H_t_1 = t == 0 ? H_0_.mutable_gpu_data() : top_data + top[0]->offset(t - 1);
 			const Dtype* x_conv_t = conv_x_top_blob_.gpu_data() + conv_x_top_blob_.offset(t);
+			const Dtype* h_conv_t = conv_h_top_blob_.gpu_data();
 			conv_h_btm_blob_.data()->set_gpu_data(H_t_1);
 			conv_h_layer_->Forward(conv_h_btm_vec_, conv_h_top_vec_);
-			caffe_gpu_add(featmap_dim, conv_h_top_blob_.gpu_data(), x_conv_t, H_t);
 
 			ActivationForward<Dtype> << <CAFFE_GET_BLOCKS(featmap_dim), CAFFE_CUDA_NUM_THREADS >> >
-				(featmap_dim, act_type, H_t, H_t);
+				(featmap_dim, act_type, x_conv_t, h_conv_t, H_t);
 			CUDA_POST_KERNEL_CHECK;
 
 			if (is_warping_)

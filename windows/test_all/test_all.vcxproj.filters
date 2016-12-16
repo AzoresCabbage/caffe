@@ -32,9 +32,6 @@
     <ClCompile Include="..\..\src\caffe\test\test_conv_rnn_layer.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="test_conv_rnn_gpu.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\caffe\test\test_caffe_main.hpp">
