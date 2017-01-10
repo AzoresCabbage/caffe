@@ -68,6 +68,7 @@ namespace caffe {
 		// [2]: Height
 		// [3]: Width
 		unit_shape[0] = 1;
+		unit_shape[1] = num_output_;
 		H_0_.Reshape(unit_shape);
 		conv_h_btm_blob_.Reshape(unit_shape);
 
@@ -223,7 +224,7 @@ namespace caffe {
 		Dtype* top_data = top[0]->mutable_cpu_data();
 		int featmap_dim = spatial_dims_ * num_output_;
 
-		caffe_set(H_0_.count(), Dtype(0.), H_0_.mutable_cpu_data());
+		caffe_set(H_0_.count(0), Dtype(0.), H_0_.mutable_cpu_data());
 		// For all input X: X[t] -> U*X[t] in conv_x_top_blob_
 		conv_x_layer_->Forward(conv_x_btm_vec_, conv_x_top_vec_);
 
@@ -258,7 +259,7 @@ namespace caffe {
 		Dtype* top_data = top[0]->mutable_cpu_data();
 		int featmap_dim = spatial_dims_ * num_output_;
 
-		caffe_set(H_0_.count(), Dtype(0.), H_0_.mutable_cpu_diff());
+		caffe_set(H_0_.count(0), Dtype(0.), H_0_.mutable_cpu_diff());
 
 		for (int t = seq_len_ - 1; t >= 0; --t)
 		{

@@ -215,7 +215,7 @@ namespace caffe {
 		int feature_dims = H_ * spatial_dims; // one input's size
 
 		// Initialize previous state
-		caffe_set(h_0_.count(), Dtype(0.), h_0_.mutable_cpu_data());
+		caffe_set(h_0_.count(0), Dtype(0.), h_0_.mutable_cpu_data());
 
 		// Compute input to gate forward propagation
 		// W*Xt, Wz*Xt, Wr*Xt
@@ -301,7 +301,7 @@ namespace caffe {
 		Dtype* hidden_rt_data = hidden_reset_.mutable_cpu_data(); // conv_tmp_hidden_bottom_vec data
 		Dtype* hidden_rt_pre_gate_diff = hidden_rt_pre_gate_.mutable_cpu_diff(); // conv_tmp_hidden_top_vec diff
 		const Dtype* hidden_rt_diff = hidden_reset_.mutable_cpu_diff(); // conv_tmp_hidden_bottom_vec diff
-		caffe_set(h_0_.count(), Dtype(0.), h_0_.mutable_cpu_diff());
+		caffe_set(h_0_.count(0), Dtype(0.), h_0_.mutable_cpu_diff());
 
 		int feature_dims = H_ * spatial_dims;
 

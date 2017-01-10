@@ -124,8 +124,8 @@ namespace caffe {
 		Dtype* top_data = top[0]->mutable_gpu_data();
 		int featmap_dim = spatial_dims_ * num_output_;
 
-		caffe_gpu_set<Dtype>(H_0_.count(), Dtype(0.), H_0_.mutable_gpu_data());
-		caffe_gpu_set<Dtype>(C_0_.count(), Dtype(0.), C_0_.mutable_gpu_data());
+		caffe_gpu_set<Dtype>(H_0_.count(0), Dtype(0.), H_0_.mutable_gpu_data());
+		caffe_gpu_set<Dtype>(C_0_.count(0), Dtype(0.), C_0_.mutable_gpu_data());
 
 		// For all input X: X[t] -> Wxi*X[t], Wxf*X[t], Wxc*X[t], Wxo*X[t] in conv_x_top_blob_
 		conv_x_layer_->Forward(conv_x_btm_vec_, conv_x_top_vec_);
@@ -149,7 +149,7 @@ namespace caffe {
 
 			// cache Whc*H[t-1] for backward
 			Dtype* wh_data = conv_h_top_t_.mutable_gpu_data() + conv_h_top_t_.offset(t);
-			caffe_gpu_memcpy(conv_h_top_blob_.count(), H_w_t_1, wh_data);
+			caffe_gpu_memcpy(conv_h_top_blob_.count(0), H_w_t_1, wh_data);
 
 			Dtype* C_t_1 = t == 0 ? C_0_.mutable_gpu_data() : gate_c_t_data - gate_c_.count(1);
 			Dtype* wc_data = Wc_.mutable_gpu_data();
@@ -170,8 +170,8 @@ namespace caffe {
 		Dtype* top_data = top[0]->mutable_gpu_data();
 		int featmap_dim = spatial_dims_ * num_output_;
 
-		caffe_gpu_set<Dtype>(H_0_.count(), Dtype(0.), H_0_.mutable_gpu_diff());
-		caffe_gpu_set<Dtype>(C_0_.count(), Dtype(0.), C_0_.mutable_gpu_diff());
+		caffe_gpu_set<Dtype>(H_0_.count(0), Dtype(0.), H_0_.mutable_gpu_diff());
+		caffe_gpu_set<Dtype>(C_0_.count(0), Dtype(0.), C_0_.mutable_gpu_diff());
 
 		for (int t = seq_len_ - 1; t >= 0; --t)
 		{
@@ -215,7 +215,7 @@ namespace caffe {
 
 			// add conv_btm_blob to H[t-1] diff
 			const Dtype* conv_h_t_1_diff = conv_h_btm_blob_.gpu_diff();
-			caffe_gpu_add<Dtype>(conv_h_btm_blob_.count(), H_t_1_diff, conv_h_t_1_diff, H_t_1_diff);
+			caffe_gpu_add<Dtype>(conv_h_btm_blob_.count(0), H_t_1_diff, conv_h_t_1_diff, H_t_1_diff);
 		}
 		conv_x_layer_->Backward(conv_x_top_vec_, vector<bool>{propagate_down[0]}, conv_x_btm_vec_);
 	}

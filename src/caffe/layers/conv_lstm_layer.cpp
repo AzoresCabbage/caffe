@@ -262,8 +262,8 @@ namespace caffe {
 		Dtype* top_data = top[0]->mutable_cpu_data();
 		int featmap_dim = spatial_dims_ * num_output_;
 
-		caffe_set(H_0_.count(), Dtype(0.), H_0_.mutable_cpu_data());
-		caffe_set(C_0_.count(), Dtype(0.), C_0_.mutable_cpu_data());
+		caffe_set(H_0_.count(0), Dtype(0.), H_0_.mutable_cpu_data());
+		caffe_set(C_0_.count(0), Dtype(0.), C_0_.mutable_cpu_data());
 
 		// For all input X: X[t] -> Wxi*X[t], Wxf*X[t], Wxc*X[t], Wxo*X[t] in conv_x_top_blob_
 		conv_x_layer_->Forward(conv_x_btm_vec_, conv_x_top_vec_);
@@ -308,7 +308,7 @@ namespace caffe {
 
 			// cache Whc*H[t-1] for backward
 			Dtype* wh_data = conv_h_top_t_.mutable_cpu_data() + conv_h_top_t_.offset(t);
-			caffe_copy(conv_h_top_blob_.count(), H_w_t_1, wh_data);
+			caffe_copy(conv_h_top_blob_.count(0), H_w_t_1, wh_data);
 
 			// I[t] = Wxi*X[t] + Whi*H[t-1] + Wci.*C[t-1] + bi(bias term of conv_x)
 			caffe_add(featmap_dim, x_wi_t, h_wi_t_1, gate_i_t_data);
@@ -354,8 +354,8 @@ namespace caffe {
 		Dtype* top_data = top[0]->mutable_cpu_data();
 		int featmap_dim = spatial_dims_ * num_output_;
 
-		caffe_set(H_0_.count(), Dtype(0.), H_0_.mutable_cpu_diff());
-		caffe_set(C_0_.count(), Dtype(0.), C_0_.mutable_cpu_diff());
+		caffe_set(H_0_.count(0), Dtype(0.), H_0_.mutable_cpu_diff());
+		caffe_set(C_0_.count(0), Dtype(0.), C_0_.mutable_cpu_diff());
 
 		for (int t = seq_len_ - 1; t >= 0; --t)
 		{
@@ -391,7 +391,7 @@ namespace caffe {
 			// conv H data
 			Dtype* H_w_t_1_data = conv_h_top_blob_.mutable_cpu_data();
 			// restore conv_h_top_ at t
-			caffe_copy(conv_h_top_blob_.count(), conv_h_top_t_.mutable_cpu_data() + conv_h_top_t_.offset(t), H_w_t_1_data);
+			caffe_copy(conv_h_top_blob_.count(0), conv_h_top_t_.mutable_cpu_data() + conv_h_top_t_.offset(t), H_w_t_1_data);
 			Dtype* h_wc_t_1_data = H_w_t_1_data + featmap_dim * 2;
 			// conv H diff
 			Dtype* H_w_t_1_diff = conv_h_top_blob_.mutable_cpu_diff();
@@ -464,7 +464,7 @@ namespace caffe {
 
 			// add conv_btm_blob to H[t-1] diff
 			const Dtype* conv_h_t_1_diff = conv_h_btm_blob_.cpu_diff();
-			caffe_add(conv_h_btm_blob_.count(), H_t_1_diff, conv_h_t_1_diff, H_t_1_diff);
+			caffe_add(conv_h_btm_blob_.count(0), H_t_1_diff, conv_h_t_1_diff, H_t_1_diff);
 		}
 		conv_x_layer_->Backward(conv_x_top_vec_, vector<bool>{propagate_down[0]}, conv_x_btm_vec_);
 	}

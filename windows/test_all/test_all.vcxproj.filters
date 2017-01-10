@@ -26,9 +26,6 @@
     <ClCompile Include="..\..\src\caffe\test\test_conv_lstm_layer.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\caffe\test\test_test_layer.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\caffe\test\test_conv_rnn_layer.cpp">
       <Filter>src</Filter>
     </ClCompile>

@@ -145,7 +145,7 @@ void ConvGRULayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
 	int feature_dims = H_ * spatial_dims;
 
 	// Initialize previous state
-	caffe_gpu_set(h_0_.count(), Dtype(0.), h_0_.mutable_gpu_data());
+	caffe_gpu_set(h_0_.count(0), Dtype(0.), h_0_.mutable_gpu_data());
 
 	// Compute input to gate forward propagation
 	conv_input_layer_->Forward(conv_input_bottom_vec_, conv_input_top_vec_);
@@ -192,7 +192,7 @@ void ConvGRULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 	Dtype* hidden_rt_data = hidden_reset_.mutable_gpu_data();
 	Dtype* hidden_rt_pre_gate_diff = hidden_rt_pre_gate_.mutable_gpu_diff();
 	const Dtype* hidden_rt_diff = hidden_reset_.mutable_gpu_diff();
-	caffe_gpu_set(h_0_.count(), Dtype(0.), h_0_.mutable_gpu_diff());
+	caffe_gpu_set(h_0_.count(0), Dtype(0.), h_0_.mutable_gpu_diff());
 
 	int feature_dims = H_ * spatial_dims;
 

@@ -101,7 +101,7 @@ namespace caffe {
 		int featmap_dim = spatial_dims_ * num_output_;
 		const int act_type = act_func_->act_typeid();
 
-		caffe_gpu_set(H_0_.count(), Dtype(0.), H_0_.mutable_gpu_diff());
+		caffe_gpu_set(H_0_.count(0), Dtype(0.), H_0_.mutable_gpu_diff());
 
 		for (int t = seq_len_ - 1; t >= 0; --t)
 		{
