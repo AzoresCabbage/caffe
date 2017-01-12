@@ -205,6 +205,7 @@ namespace caffe {
 
 		unit_shape[0] = 1;
 		H_0_.Reshape(unit_shape);
+		conv_h_btm_blob_.Reshape(unit_shape);
 
 		if (is_warping_)
 		{
