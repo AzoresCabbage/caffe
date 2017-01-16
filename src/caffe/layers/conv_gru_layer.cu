@@ -63,11 +63,11 @@ __global__ void SigmoidForward(const int nthreads, const int H, Dtype* hidden_pr
 
 		// Rt = sigmoid(Wr*Xt + Ur*H[t-1])
 		input_pre_gate[n * 3 * H + d] += hidden_pre_gate[n * 2 * H + d];
-		input_pre_gate[n * 3 * H + d] = hard_sigmoid(input_pre_gate[n * 3 * H + d]);
+		input_pre_gate[n * 3 * H + d] = sigmoid(input_pre_gate[n * 3 * H + d]);
 
 		// Zt = sigmoid(Wz*Xt + Uz*H[t-1])
         input_pre_gate[n * 3 * H + H + d] += hidden_pre_gate[n * 2 * H + H + d];
-        input_pre_gate[n * 3 * H + H + d] = hard_sigmoid(input_pre_gate[n * 3 * H + H + d]);
+        input_pre_gate[n * 3 * H + H + d] = sigmoid(input_pre_gate[n * 3 * H + H + d]);
 
 		// Rt .* H[t-1] for before Ht_candidate conv
         hidden_reset_[index] = input_pre_gate[n * 3 * H + d] * h_t_1[index];
@@ -87,7 +87,7 @@ __global__ void ActivationForward(const int nthreads, const int H, Dtype* hidden
 		input_pre_gate[n * 3 * H + 2 * H + d] = tanh(input_pre_gate[n * 3 * H + 2 * H + d]);
 
         Dtype z_t = input_pre_gate[n * 3 * H + H + d];
-        h_t[index] = z_t * h_t_1[index] + (1 - z_t) * input_pre_gate[n * 3 * H + 2 * H + d];
+		h_t[index] = (1 - z_t) * h_t_1[index] + z_t * input_pre_gate[n * 3 * H + 2 * H + d];
 	}
 }
 
@@ -100,15 +100,15 @@ __global__ void ActivationBackward(const int nthreads, const int H,
         const int n = index / H;
 		const int d = index % H;
 		
-        dh_t_1[index] += dh_t[index] * gate[n * 3 * H + H + d];
+		dh_t_1[index] += dh_t[index] * (1 - gate[n * 3 * H + H + d]);
 
-        pre_gate_diff[n * 3 * H + 2 * H + d] = dh_t[index] * (1 - gate[n * 3 * H + H + d]);
+		pre_gate_diff[n * 3 * H + 2 * H + d] = dh_t[index] * gate[n * 3 * H + H + d];
 		// Yujie : Why use relu here?
 		// pre_gate_diff[n * 3 * H + 2 * H + d] *= d_relu(gate[n * 3 * H + 2 * H + d]);
 		pre_gate_diff[n * 3 * H + 2 * H + d] *= d_tanh(gate[n * 3 * H + 2 * H + d]);
 
-		pre_gate_diff[n * 3 * H + H + d] = dh_t[index] * (h_t_1[index] - gate[n * 3 * H + 2 * H + d]);
-		pre_gate_diff[n * 3 * H + H + d] *= d_hard_sigmoid(gate[n * 3 * H + H + d]);
+		pre_gate_diff[n * 3 * H + H + d] = dh_t[index] * (gate[n * 3 * H + 2 * H + d] - h_t_1[index]);
+		pre_gate_diff[n * 3 * H + H + d] *= d_sigmoid(gate[n * 3 * H + H + d]);
 
 	    hidden_reset_[index] = gate[n * 3 * H + d] * h_t_1[index];
 
@@ -126,7 +126,7 @@ __global__ void SigmoidBackward(const int nthreads, const int H,
 		
         dh_t_1[index] += hidden_rt_diff[index] * gate[n * 3 * H + d];
         pre_gate_diff[n * 3 * H + d] = hidden_rt_diff[index] * h_t_1[index];
-        pre_gate_diff[n * 3 * H + d] *= d_hard_sigmoid(gate[n * 3 * H + d]);
+        pre_gate_diff[n * 3 * H + d] *= d_sigmoid(gate[n * 3 * H + d]);
 
         hidden_pre_gate_diff[n * 2 * H + d] = pre_gate_diff[n * 3 * H + d];
         hidden_pre_gate_diff[n * 2 * H + H + d] = pre_gate_diff[n * 3 * H + H + d];

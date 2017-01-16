@@ -14,10 +14,10 @@ namespace caffe {
 	/**
 	* @brief Convolutional Long Short Term Memory(ConvLSTM) layer.
 	* Formula:
-	*	I[t] = sigmoid(Wxi*X[t] + Whi*H[t-1] + Wci.*C[t-1] + bi)
-	*	F[t] = sigmoid(Wxf*X[t] + Whf*H[t-1] + Wcf.*C[t-1] + bf)
+	*	I[t] = sigmoid(Wxi*X[t] + Whi*H[t-1] + bi)
+	*	F[t] = sigmoid(Wxf*X[t] + Whf*H[t-1] + bf)
 	*	C[t] = F[t].*C[t-1] + I[t].*tanh(Wxc*X[t] + Whc*H[t-1] + bc)
-	*	O[t] = sigmoid(Wxo*X[t] + Who*H[t-1] + Wco.*C[t] + bo)
+	*	O[t] = sigmoid(Wxo*X[t] + Who*H[t-1] + bo)
 	*	H[t] = O[t] * tanh(C[t])
 	*
 	*	*  means convolution operation
@@ -74,14 +74,7 @@ namespace caffe {
 		vector<Blob<Dtype>*> conv_h_btm_vec_; // H[t-1] blob vector
 		vector<Blob<Dtype>*> conv_h_top_vec_;
 
-		Blob<Dtype> conv_h_top_t_;
-
-		// matrix for eltwise multiply with memory cell C[t-1], shape: 1xCxHxW
-		Blob<Dtype> Wc_;
-		Blob<Dtype> Wci_c_t_1_;
-		Blob<Dtype> Wcf_c_t_1_;
-
-		Blob<Dtype> wo_ct_tmp_; // tmp value for Wco .* C[t], shape: NxCxHxW
+		Blob<Dtype> gate_c_tanh_;
 
 		// intermediate variable that before activation, shape: NxCxHxW
 		Blob<Dtype> gate_i_;

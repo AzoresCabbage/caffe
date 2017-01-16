@@ -13,6 +13,11 @@ namespace caffe {
 	}
 
 	template <typename Dtype>
+	inline Dtype d_sigmoid(Dtype x) {
+		return x * (1 - x);
+	}
+
+	template <typename Dtype>
 	inline Dtype hard_sigmoid(Dtype x) {
 		return std::max<Dtype>(std::min<Dtype>(0.2 * x + 0.5, 1), 0);
 	}
@@ -29,6 +34,8 @@ namespace caffe {
 	void ConvGRULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 		const vector<Blob<Dtype>*>& top) {
 		clipping_threshold_ = this->layer_param_.conv_gru_param().clipping_threshold();
+		const FillerParameter& weight_filler = this->layer_param_.convolution_param().weight_filler();
+		const FillerParameter& bias_filler = this->layer_param_.convolution_param().bias_filler();
 		// Input shape should like this:
 		// btm[0] : seq length * seq num(1)
 		// btm[1] : channel; 
@@ -44,7 +51,8 @@ namespace caffe {
 		for (int i = 0; i < bottom[0]->shape().size(); ++i) {
 			unit_shape.push_back(bottom[0]->shape()[i]);
 		}
-		unit_shape[0] = T_;
+		unit_shape[0] = 1;
+		unit_shape[1] = H_;
 		// All units' shape in convGRU should like this, except input:
 		// 0: seq length
 		// 1: num_output
@@ -62,6 +70,8 @@ namespace caffe {
 		param_bias->set_lr_mult(2);
 
 		ConvolutionParameter* input_conv_param = conv_layer_param.mutable_convolution_param();
+		input_conv_param->mutable_weight_filler()->CopyFrom(weight_filler);
+		input_conv_param->mutable_bias_filler()->CopyFrom(bias_filler);
 		CHECK_EQ(input_conv_param->kernel_size().size(), 1);
 		int kernel_size = input_conv_param->kernel_size().Get(0);
 		int dilation = 1;
@@ -85,6 +95,8 @@ namespace caffe {
 
 		//Set up conv_hidden_layer_
 		LayerParameter hidden_conv_param(conv_layer_param);
+		hidden_conv_param.mutable_convolution_param()->mutable_weight_filler()->CopyFrom(weight_filler);
+		hidden_conv_param.mutable_convolution_param()->mutable_bias_filler()->CopyFrom(bias_filler);
 		hidden_conv_param.mutable_convolution_param()->set_axis(1); // see unit shape above
 		hidden_conv_param.mutable_convolution_param()->set_bias_term(false);
 		// H[t-1] should contribute to Ur, Uz. Due to U * (Rt .* H[t-1]), so we need to calc it in conv_tmp_hidden_layer_
@@ -100,6 +112,8 @@ namespace caffe {
 
 		//Set up conv_tmp_hidden_layer_
 		LayerParameter tmp_hidden_conv_param(hidden_conv_param);
+		tmp_hidden_conv_param.mutable_convolution_param()->mutable_weight_filler()->CopyFrom(weight_filler);
+		tmp_hidden_conv_param.mutable_convolution_param()->mutable_bias_filler()->CopyFrom(bias_filler);
 		tmp_hidden_conv_param.mutable_convolution_param()->set_num_output(H_);
 		tmp_hidden_conv_param.clear_param();
 
@@ -187,16 +201,13 @@ namespace caffe {
 		for (int i = 0; i < bottom[0]->shape().size(); ++i) {
 			unit_shape.push_back(bottom[0]->shape()[i]);
 		}
-		unit_shape[0] = T_;
+		unit_shape[1] = H_;
+		top[0]->Reshape(unit_shape);
+
+		unit_shape[0] = 1;
 		h_0_.Reshape(unit_shape);
 		hidden_.Reshape(unit_shape);
 		hidden_reset_.Reshape(unit_shape);
-
-		vector<int> original_top_shape;
-		for (int i = 0; i < bottom[0]->shape().size(); ++i) {
-			original_top_shape.push_back(bottom[0]->shape()[i]);
-		}
-		top[0]->Reshape(original_top_shape);
 
 		conv_input_layer_->Reshape(conv_input_bottom_vec_, conv_input_top_vec_);
 		conv_hidden_layer_->Reshape(conv_hidden_bottom_vec_, conv_hidden_top_vec_);
@@ -240,50 +251,47 @@ namespace caffe {
 			// Ur*H[t-1], Uz*H[t-1]
 			conv_hidden_layer_->Forward(conv_hidden_bottom_vec_, conv_hidden_top_vec_);
 
-			for (int n = 0; n < N_; ++n) {
-				Dtype* input_pre_gate_t_n = input_pre_gate_t + n * 3 * feature_dims;
-				Dtype* hidden_pre_gate_data_n = hidden_pre_gate_data + n * 2 * feature_dims;
-				Dtype* hidden_rt_data_n = hidden_rt_data + n * feature_dims;
-				Dtype* h_t_1_n = h_t_1 + n * feature_dims;
+			Dtype* input_pre_gate_t_n = input_pre_gate_t;
+			Dtype* hidden_pre_gate_data_n = hidden_pre_gate_data;
+			Dtype* hidden_rt_data_n = hidden_rt_data;
+			Dtype* h_t_1_n = h_t_1;
 
-				// Wr*Xr + Ur*H[t-1] ; Wz*Xt + Uz*H[t-1]
-				caffe_add(2 * feature_dims, input_pre_gate_t_n, hidden_pre_gate_data_n, input_pre_gate_t_n);
-				// reset_gate or Rt = sigmoid(Wr*Xr + Ur*H[t-1]) ; update_gate or Zt = sigmoid(Wz*Xt + Uz*H[t-1])
-				for (int d = 0; d < 2 * feature_dims; ++d) {
-					// Apply nonlinearity
-					input_pre_gate_t_n[d] = hard_sigmoid(input_pre_gate_t_n[d]);
-				}
-				//Rt .* H[t-1]
-				for (int d = 0; d < feature_dims; ++d){
-					hidden_rt_data_n[d] = input_pre_gate_t_n[d] * h_t_1_n[d];
-				}
+			// Wr*Xr + Ur*H[t-1] ; Wz*Xt + Uz*H[t-1]
+			caffe_add(2 * feature_dims, input_pre_gate_t_n, hidden_pre_gate_data_n, input_pre_gate_t_n);
+			// reset_gate or Rt = sigmoid(Wr*Xr + Ur*H[t-1])
+			// update_gate or Zt = sigmoid(Wz*Xt + Uz*H[t-1])
+			for (int d = 0; d < 2 * feature_dims; ++d) {
+				// Apply nonlinearity
+				input_pre_gate_t_n[d] = sigmoid(input_pre_gate_t_n[d]);
 			}
-			
+			//Rt .* H[t-1]
+			for (int d = 0; d < feature_dims; ++d){
+				hidden_rt_data_n[d] = input_pre_gate_t_n[d] * h_t_1_n[d];
+			}
+
+
 			//U*(Rt .* H[t-1])
 			conv_tmp_hidden_layer_->Forward(conv_tmp_hidden_bottom_vec_, conv_tmp_hidden_top_vec_);
 
-			for (int n = 0; n < N_; ++n) {
-				Dtype* input_pre_gate_t_n = input_pre_gate_t + n * 3 * feature_dims + 2 * feature_dims;
-				Dtype* hidden_rt_pre_gate_data_n = hidden_rt_pre_gate_data + n * feature_dims;
-				// W*X + U*(Rt .* H[t-1])
-				caffe_add(feature_dims, input_pre_gate_t_n,	hidden_rt_pre_gate_data_n, input_pre_gate_t_n);
-				// tanh(W*X + U*(Rt .* H[t-1]))
-				for (int d = 0; d < feature_dims; ++d) {
-					// Apply nonlinearity
-					input_pre_gate_t_n[d] = tanh(input_pre_gate_t_n[d]);
-				}
+
+			input_pre_gate_t_n = input_pre_gate_t + 2 * feature_dims;
+			Dtype* hidden_rt_pre_gate_data_n = hidden_rt_pre_gate_data;
+			// W*X + U*(Rt .* H[t-1])
+			caffe_add(feature_dims, input_pre_gate_t_n, hidden_rt_pre_gate_data_n, input_pre_gate_t_n);
+			// tanh(W*X + U*(Rt .* H[t-1]))
+			for (int d = 0; d < feature_dims; ++d) {
+				// Apply nonlinearity
+				input_pre_gate_t_n[d] = tanh(input_pre_gate_t_n[d]);
 			}
 
-			for (int n = 0; n < N_; ++n) {
-				Dtype* z_t_n = input_pre_gate_t + n * 3 * feature_dims + feature_dims;
-				Dtype* h_t_1_n = h_t_1 + n * feature_dims;
-				Dtype* h_t_n = h_t + n * feature_dims;
-				Dtype* tmp_h_t_n = input_pre_gate_t + n * 3 * feature_dims + 2 * feature_dims;
-				// Yujie : Any effect? in the paper, the equation is: H[t] = (1-Zt) .* H[t-1] + Zt .* H[candidate]
-				for (int d = 0; d < feature_dims; ++d) {
-					h_t_n[d] = z_t_n[d] * h_t_1_n[d] + (1 - z_t_n[d]) * tmp_h_t_n[d];
-				}
+
+			Dtype* z_t_n = input_pre_gate_t + feature_dims;
+			Dtype* h_t_n = h_t;
+			Dtype* tmp_h_t_n = input_pre_gate_t + 2 * feature_dims;
+			for (int d = 0; d < feature_dims; ++d) {
+				h_t_n[d] = (1 - z_t_n[d]) * h_t_1_n[d] + z_t_n[d] * tmp_h_t_n[d];
 			}
+
 		} // for tt
 	}
 
@@ -315,7 +323,7 @@ namespace caffe {
 
 			// bottom diff of this seq order
 			Dtype* dh_t_1 = t > 0 ? top_diff + top[0]->count(1) * (t - 1) : h_0_.mutable_cpu_diff();
-			
+
 			// bottom data of this seq order
 			Dtype* h_t_1 = t > 0 ? (top[0]->mutable_cpu_data() + top[0]->count(1) * (t - 1)) : h_0_.mutable_cpu_data();
 			if (!forward_direction_){
@@ -323,66 +331,60 @@ namespace caffe {
 				h_t_1 = t < T_ - 1 ? (top[0]->mutable_cpu_data() + top[0]->count(1) * (t + 1)) : h_0_.mutable_cpu_data();
 			}
 
-			for (int n = 0; n < N_; ++n) {
-				Dtype* pre_gate_diff_t_n = pre_gate_diff_t + n * 3 * feature_dims;
-				const Dtype* gate_t_n = gate_t + n * 3 * feature_dims;
-				Dtype* dh_t_1_n = dh_t_1 + n * feature_dims;
-				Dtype* dh_t_n = dh_t + n * feature_dims;
-				Dtype* h_t_1_n = h_t_1 + n * feature_dims;
-				Dtype* hidden_rt_data_n = hidden_rt_data + n * feature_dims;
-				Dtype* hidden_rt_pre_gate_diff_n = hidden_rt_pre_gate_diff + n * feature_dims;
 
-				for (int d = 0; d < feature_dims; ++d) {
-					// diff: top_diff -> (1-Zt) .* H[t-1] -> H[t-1]
-					// becasue in forward, the weight for H[t-1] is Zt, so 1-Zt -> Zt here actually
-					dh_t_1_n[d] += dh_t_n[d] * gate_t_n[d + feature_dims];
+			Dtype* pre_gate_diff_t_n = pre_gate_diff_t;
+			const Dtype* gate_t_n = gate_t;
+			Dtype* dh_t_1_n = dh_t_1;
+			Dtype* dh_t_n = dh_t;
+			Dtype* h_t_1_n = h_t_1;
+			Dtype* hidden_rt_data_n = hidden_rt_data;
+			Dtype* hidden_rt_pre_gate_diff_n = hidden_rt_pre_gate_diff;
 
-					// diff: top_diff -> after Ht_candidate -> Ht_candidate -> after input_conv
-					pre_gate_diff_t_n[d + 2 * feature_dims] = dh_t_n[d] * (1 - gate_t_n[d + feature_dims]);
-					pre_gate_diff_t_n[d + 2 * feature_dims] *= 1 - gate_t_n[d + 2 * feature_dims] * gate_t_n[d + 2 * feature_dims];
+			for (int d = 0; d < feature_dims; ++d) {
+				// diff: top_diff -> (1-Zt) .* H[t-1] -> H[t-1]
+				dh_t_1_n[d] += dh_t_n[d] * (1 - gate_t_n[d + feature_dims]);
 
-					// diff: top_diff -> Zt and 1-Zt -> after input_conv
-					pre_gate_diff_t_n[d + feature_dims] = dh_t_n[d] * (h_t_1_n[d] - gate_t_n[d + 2 * feature_dims]);
-					pre_gate_diff_t_n[d + feature_dims] *= d_hard_sigmoid(gate_t_n[d + feature_dims]);
+				// diff: top_diff -> after Ht_candidate -> Ht_candidate -> after input_conv
+				pre_gate_diff_t_n[d + 2 * feature_dims] = dh_t_n[d] * gate_t_n[d + feature_dims];
+				pre_gate_diff_t_n[d + 2 * feature_dims] *= 1 - gate_t_n[d + 2 * feature_dims] * gate_t_n[d + 2 * feature_dims];
 
-					// Yujie: why should we do such work again? 
-					//        in forward, this is done and not changed
-					hidden_rt_data_n[d] = gate_t_n[d] * h_t_1_n[d];
-					
-					// Ht_candidate = W*Xt + U(Rt .* H[t-1])
-					// gradient for W*Xt is equal to U(Rt .* H[t-1])
-					// diff: Ht_candidate -> after_tmp_conv(hidden_reset_pre_gate)
-					hidden_rt_pre_gate_diff_n[d] = pre_gate_diff_t_n[d + 2 * feature_dims];
-				}
+				// diff: top_diff -> Zt and 1-Zt -> after input_conv
+				pre_gate_diff_t_n[d + feature_dims] = dh_t_n[d] * (gate_t_n[d + 2 * feature_dims] - h_t_1_n[d]);
+				pre_gate_diff_t_n[d + feature_dims] *= d_sigmoid(gate_t_n[d + feature_dims]);
+
+				// Yujie: why should we do such work again? 
+				//        in forward, this is done and not changed
+				hidden_rt_data_n[d] = gate_t_n[d] * h_t_1_n[d];
+
+				// Ht_candidate = W*Xt + U(Rt .* H[t-1])
+				// gradient for W*Xt is equal to U(Rt .* H[t-1])
+				// diff: Ht_candidate -> after_tmp_conv(hidden_reset_pre_gate)
+				hidden_rt_pre_gate_diff_n[d] = pre_gate_diff_t_n[d + 2 * feature_dims];
 			}
+
 
 			// hidden_reset_pre_gate -> hidden_reset_
 			conv_tmp_hidden_layer_->Backward(conv_tmp_hidden_top_vec_, vector<bool>{true}, conv_tmp_hidden_bottom_vec_);
 
-			for (int n = 0; n < N_; ++n) {
-				Dtype* pre_gate_diff_t_n = pre_gate_diff_t + n * 3 * feature_dims;
-				const Dtype* gate_t_n = gate_t + n * 3 * feature_dims;
-				Dtype* dh_t_1_n = dh_t_1 + n * feature_dims;
-				Dtype* h_t_1_n = h_t_1 + n * feature_dims;
-				const Dtype* hidden_rt_diff_n = hidden_rt_diff + n * feature_dims;
-				Dtype* hidden_pre_gate_diff_n = hidden_pre_gate_diff + n * feature_dims;
+			const Dtype* hidden_rt_diff_n = hidden_rt_diff;
+			Dtype* hidden_pre_gate_diff_n = hidden_pre_gate_diff;
 
-				for (int d = 0; d < feature_dims; ++d) {
-					// diff: before_tmp_conv(Rt .* H[t-1]) -> H[t-1]
-					dh_t_1_n[d] += hidden_rt_diff_n[d] * gate_t_n[d];
-					
-					// diff: Rt .* H[t-1] -> Rt -> after_input_conv
-					pre_gate_diff_t_n[d] = hidden_rt_diff_n[d] * h_t_1_n[d];
-					pre_gate_diff_t_n[d] *= d_hard_sigmoid(gate_t_n[d]);
+			for (int d = 0; d < feature_dims; ++d) {
+				// diff: before_tmp_conv(Rt .* H[t-1]) -> H[t-1]
+				dh_t_1_n[d] += hidden_rt_diff_n[d] * gate_t_n[d];
 
-					// data is sum relation between W[i]*Xt and U[i]*H[t-1]
-					// so diffs are equal for W[i]*Xt and U[i]*H[t-1]
-					// diff: Rt .* H[t-1] -> Rt -> after_hidden_conv
-					hidden_pre_gate_diff_n[d] = pre_gate_diff_t_n[d];
-					// diff: Zt -> after_hidden_conv
-					hidden_pre_gate_diff_n[d + feature_dims] = pre_gate_diff_t_n[d + feature_dims];
-				}
+				// diff: Rt .* H[t-1] -> Rt -> after_input_conv
+				pre_gate_diff_t_n[d] = hidden_rt_diff_n[d] * h_t_1_n[d];
+				pre_gate_diff_t_n[d] *= d_sigmoid(gate_t_n[d]);
+
+				// data is sum relation between W[i]*Xt and U[i]*H[t-1]
+				// so diffs are equal for W[i]*Xt and U[i]*H[t-1]
+				// diff: Rt .* H[t-1] -> Rt -> after_hidden_conv
+				hidden_pre_gate_diff_n[d] = pre_gate_diff_t_n[d];
+				// diff: Zt -> after_hidden_conv
+				hidden_pre_gate_diff_n[d + feature_dims] = pre_gate_diff_t_n[d + feature_dims];
 			}
+
 
 			// Backprop output errors to the previous time step
 			// hidden_pre_gate_(after_hidden_conv) -> hidden(H[t-1])

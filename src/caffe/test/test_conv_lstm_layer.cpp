@@ -16,7 +16,7 @@ namespace caffe {
 		typedef typename TypeParam::Dtype Dtype;
 	protected:
 		ConvLSTMLayerTest()
-			: blob_bottom_(new Blob<Dtype>(vector<int>{ 2, 3, 2, 2 })),
+			: blob_bottom_(new Blob<Dtype>(vector<int>{ 5, 3, 2, 2 })),
 			blob_top_(new Blob<Dtype>()) {
 			//fill the values
 			FillerParameter filler_param;
@@ -50,8 +50,8 @@ namespace caffe {
 			sizeof(Dtype) == 4 || IS_VALID_CUDA) {
 			LayerParameter layer_param;
 			ConvolutionParameter* conv_param = layer_param.mutable_convolution_param();
-			conv_param->set_num_output(2);
-			conv_param->add_kernel_size(1);
+			conv_param->set_num_output(1);
+			conv_param->add_kernel_size(3);
 			/*conv_param->mutable_weight_filler()->set_type("constant");
 			conv_param->mutable_weight_filler()->set_value(0.1);*/
 			conv_param->mutable_weight_filler()->set_type("uniform");
@@ -63,7 +63,7 @@ namespace caffe {
 			this->blob_bottom_vec_.clear();
 			this->blob_bottom_vec_.push_back(this->blob_bottom_);
 			ConvLSTMLayer<Dtype> layer(layer_param);
-			GradientChecker<Dtype> checker(1e-2, 1e-3);
+			GradientChecker<Dtype> checker(1e-2, 1e-2);
 			checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
 				this->blob_top_vec_, 0);
 		}
