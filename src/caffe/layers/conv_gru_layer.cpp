@@ -34,8 +34,8 @@ namespace caffe {
 	void ConvGRULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 		const vector<Blob<Dtype>*>& top) {
 		clipping_threshold_ = this->layer_param_.conv_gru_param().clipping_threshold();
-		const FillerParameter& weight_filler = this->layer_param_.convolution_param().weight_filler();
-		const FillerParameter& bias_filler = this->layer_param_.convolution_param().bias_filler();
+		const FillerParameter& weight_filler = this->layer_param_.conv_gru_param().weight_filler();
+		const FillerParameter& bias_filler = this->layer_param_.conv_gru_param().bias_filler();
 		// Input shape should like this:
 		// btm[0] : seq length * seq num(1)
 		// btm[1] : channel; 

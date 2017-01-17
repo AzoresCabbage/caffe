@@ -65,14 +65,15 @@ namespace caffe {
 	/**
 	* @brief Convolutional Recurrent Neural Network(ConvRNN) layer.
 	* Formula:
-	*	H[t] = f(U*X[t] + W*H[t-1] + bu)
-	*
+	*	H[t] = f(Wx*X[t] + Wh*y[t-1] + bh)
+	*	Y[t] = f(Wy*H[t] + by)
 	*	*  is the convolution operation
 	*   f  is the activation function
 	*	X[t] is the input feature map in time t
 	*   H[t] is the hidden state
-	*   U and W is convolution kernel
-	*   bu is bias
+	*	Y[t] is the output for time t
+	*   Wx, Wh, Wy is convolution kernel
+	*   bh, by is bias
 	*/
 
 	//TODO(Yujie) : thorough documentation for Forward, Backward, and proto params.
@@ -109,29 +110,30 @@ namespace caffe {
 		int spatial_dims_;			// Height x Width
 		bool channelwise_conv_;     // operate channel wise conv or not
 		int act_type_;				// activation type
-		bool is_warping_;			// operate warping hidden state or not
 
 		shared_ptr<Activation<Dtype>> act_func_;
 
-		shared_ptr<ConvolutionLayer<Dtype>> conv_x_layer_; // conv layer for input X with bias term as bi, bf, bc, bo
-		Blob<Dtype> conv_x_top_blob_; // values that after convolution operation in X[1-t]
-		vector<Blob<Dtype>*> conv_x_btm_vec_; // X[1-t]: bottom[0] i.e. input feature map of entire seq
+		shared_ptr<ConvolutionLayer<Dtype>> conv_x_layer_; // conv layer for input X with bias term as bx
+		Blob<Dtype> conv_x_top_blob_; // values that after convolution operation in X[1 to t]
+		vector<Blob<Dtype>*> conv_x_btm_vec_; // X[1 to t]: bottom[0] i.e. input feature map of entire seq
 		vector<Blob<Dtype>*> conv_x_top_vec_;
 
 		shared_ptr<ConvolutionLayer<Dtype>> conv_h_layer_; //conv layer for hidden state without bias term
-		Blob<Dtype> conv_h_btm_blob_; // H[t-1] blob, its value can be fetched from top[0]
-		Blob<Dtype> conv_h_top_blob_; // values that after convolution operation in H[t-1]
-		vector<Blob<Dtype>*> conv_h_btm_vec_; // H[t-1] blob vector
+		Blob<Dtype> conv_h_btm_blob_; // Y[t-1] blob, its value can be fetched from top[0]
+		Blob<Dtype> conv_h_top_blob_; // values that after convolution operation in Y[t]
+		vector<Blob<Dtype>*> conv_h_btm_vec_;
 		vector<Blob<Dtype>*> conv_h_top_vec_;
 
-		Blob<Dtype> H_0_; // init hidden activation value, 1xCxHxW
+		shared_ptr<ConvolutionLayer<Dtype>> conv_y_layer_; //conv layer for output with bias term as by
+		Blob<Dtype> conv_y_btm_blob_; // H[t]
+		Blob<Dtype> conv_y_top_blob_; // values that after convolution operation in H[t]
+		vector<Blob<Dtype>*> conv_y_btm_vec_; // H[t-1] blob vector
+		vector<Blob<Dtype>*> conv_y_top_vec_;
 
-		shared_ptr<WarpingLayer<Dtype>> warping_layer_;
-		Blob<Dtype> warp_btm_blob_data_, warp_btm_blob_flow_; // 
-		Blob<Dtype> warp_top_blob_; // 
-		vector<Blob<Dtype>*> warp_btm_vec_;
-		vector<Blob<Dtype>*> warp_top_vec_;
-		Blob<Dtype> warp_0_;
+
+		Blob<Dtype> Y_0_; // init hidden activation value, 1xCxHxW
+		Blob<Dtype> H_t_; // hidden activation value of seq, NxCxHxW
+
 	};
 
 }  // namespace caffe
