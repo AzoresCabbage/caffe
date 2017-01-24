@@ -56,8 +56,6 @@ namespace caffe {
 		for (int i = 0; i < bottom[0]->shape().size(); ++i) {
 			unit_shape.push_back(bottom[0]->shape()[i]);
 		}		
-		// n * (4*num_output) * h * w
-		unit_shape[1] = 4 * num_output_;
 
 		// [0]: seq length
 		// [1]: num_output
@@ -190,8 +188,6 @@ namespace caffe {
 		for (int i = 0; i < bottom[0]->shape().size(); ++i) {
 			unit_shape.push_back(bottom[0]->shape()[i]);
 		}
-		// n * (4*num_output) * h * w
-		unit_shape[1] = 4 * num_output_;
 
 		// [0]: seq length
 		// [1]: num_output

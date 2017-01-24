@@ -26,8 +26,8 @@ namespace caffe {
 			const vector<Blob<Dtype>*>& top);
 
 		virtual inline const char* type() const { return "ConvGRU"; }
-		virtual inline int ExactNumBottomBlobs() const { return 1; }
-		virtual inline int ExactNumTopBlobs() const { return 1; }
+		//virtual inline int ExactNumBottomBlobs() const { return 1; }
+		//virtual inline int ExactNumTopBlobs() const { return 1; }
 
 		virtual inline bool AllowForceBackward(const int bottom_index) const {
 			return true;
@@ -36,18 +36,16 @@ namespace caffe {
 	protected:
 		virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 			const vector<Blob<Dtype>*>& top);
-		virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
-			const vector<Blob<Dtype>*>& top);
+		/*virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+			const vector<Blob<Dtype>*>& top);*/
 		virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
 			const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
-		virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-			const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+		//virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+		//	const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
-		int T_; // length of sequence
-		int N_; // sequence num
-		int H_; // num of hidden units channels
-		int C_; // input channels
-		int spatial_dims; // HxW
+		int seq_len_; // length of sequence
+		int num_output_; // num of hidden units channels
+		int spatial_dims_; // HxW
 		bool forward_direction_;
 
 		Dtype clipping_threshold_; // threshold for clipped gradient
@@ -55,24 +53,18 @@ namespace caffe {
 		Blob<Dtype> h_0_; // previous hidden activation value
 
 		// conv layers
-		shared_ptr<ConvolutionLayer<Dtype>> conv_input_layer_;
-		Blob<Dtype> input_pre_gate_;  // gate values before nonlinearity
-		vector<Blob<Dtype>*> conv_input_bottom_vec_;
-		vector<Blob<Dtype>*> conv_input_top_vec_;
+		shared_ptr<ConvolutionLayer<Dtype>> conv_x_layer_;
+		Blob<Dtype> conv_x_top_blob_;  // gate values before nonlinearity
+		vector<Blob<Dtype>*> conv_x_bottom_vec_;
+		vector<Blob<Dtype>*> conv_x_top_vec_;
 
-		Blob<Dtype> hidden_;
+		shared_ptr<ConvolutionLayer<Dtype>> conv_h_layer_;
+		Blob<Dtype> conv_h_btm_blob_;
+		Blob<Dtype> conv_h_top_blob_;
+		vector<Blob<Dtype>*> conv_h_bottom_vec_;
+		vector<Blob<Dtype>*> conv_h_top_vec_;
 
-		shared_ptr<ConvolutionLayer<Dtype>> conv_hidden_layer_;
-		Blob<Dtype> hidden_pre_gate_;
-		vector<Blob<Dtype>*> conv_hidden_bottom_vec_;
-		vector<Blob<Dtype>*> conv_hidden_top_vec_;
-
-		Blob<Dtype> hidden_reset_;
-
-		shared_ptr<ConvolutionLayer<Dtype>> conv_tmp_hidden_layer_;
-		Blob<Dtype> hidden_rt_pre_gate_;
-		vector<Blob<Dtype>*> conv_tmp_hidden_bottom_vec_;
-		vector<Blob<Dtype>*> conv_tmp_hidden_top_vec_;
+		Blob<Dtype> Uh_h_;
 	};
 
 }  // namespace caffe
