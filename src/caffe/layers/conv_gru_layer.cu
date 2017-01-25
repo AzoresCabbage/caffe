@@ -50,133 +50,122 @@ __device__ Dtype d_hard_sigmoid(const Dtype x) {
 		return 0.2;
 }
 
-//nthreads : N * H ; N is seq num
-//H : feature_dims = Channel*Height*Width
-//hidden_pre_gate: the data after hidden conv, 2 types (Ur, Uz) for C*H*W
-//input_pre_gate : the data after input conv. 3 types (Wr, Wz, W) for C*H*W
 template <typename Dtype>
-__global__ void SigmoidForward(const int nthreads, const int H, Dtype* hidden_pre_gate,
-	Dtype* input_pre_gate, Dtype* h_t_1, Dtype* hidden_reset_) {
-	CUDA_KERNEL_LOOP(index, nthreads) {
-        const int n = index / H;
-		const int d = index % H;
+__global__ void ActivationForward(const int feature_dims, Dtype* conv_x_top_t_data, Dtype* conv_h_top_data,
+	Dtype* h_t_1_data, Dtype* h_t_data) {
+	Dtype* Wr_x_t_data = conv_x_top_t_data + 0 * feature_dims;
+	Dtype* Wz_x_t_data = conv_x_top_t_data + 1 * feature_dims;
+	Dtype* Wh_x_t_data = conv_x_top_t_data + 2 * feature_dims;
 
-		// Rt = sigmoid(Wr*Xt + Ur*H[t-1])
-		input_pre_gate[n * 3 * H + d] += hidden_pre_gate[n * 2 * H + d];
-		input_pre_gate[n * 3 * H + d] = hard_sigmoid(input_pre_gate[n * 3 * H + d]);
+	Dtype* Ur_h_t_1_data = conv_h_top_data + 0 * feature_dims;
+	Dtype* Uz_h_t_1_data = conv_h_top_data + 1 * feature_dims;
+	Dtype* Uh_h_t_1_data = conv_h_top_data + 2 * feature_dims;
+	CUDA_KERNEL_LOOP(d, feature_dims) {
+		// reset_gate or Rt = sigmoid(Wr*Xr + Ur*H[t-1])
+		// and
+		// update_gate or Zt = sigmoid(Wz*Xt + Uz*H[t-1])
+		Wr_x_t_data[d] = sigmoid(Wr_x_t_data[d] + Ur_h_t_1_data[d]);
+		Wz_x_t_data[d] = sigmoid(Wz_x_t_data[d] + Uz_h_t_1_data[d]);
 
-		// Zt = sigmoid(Wz*Xt + Uz*H[t-1])
-        input_pre_gate[n * 3 * H + H + d] += hidden_pre_gate[n * 2 * H + H + d];
-        input_pre_gate[n * 3 * H + H + d] = hard_sigmoid(input_pre_gate[n * 3 * H + H + d]);
+		// Wh_data = tanh(W*X + U*(Rt .* H[t-1]))
+		// Apply nonlinearity
+		Wh_x_t_data[d] = tanh(Wh_x_t_data[d] + Wr_x_t_data[d] * Uh_h_t_1_data[d]);
 
-		// Rt .* H[t-1] for before Ht_candidate conv
-        hidden_reset_[index] = input_pre_gate[n * 3 * H + d] * h_t_1[index];
+		h_t_data[d] = (1 - Wz_x_t_data[d]) * h_t_1_data[d] + Wz_x_t_data[d] * Wh_x_t_data[d];
 	}
 }
 
 template <typename Dtype>
-__global__ void ActivationForward(const int nthreads, const int H, Dtype* hidden_rt_pre_gate,
-	Dtype* input_pre_gate, Dtype* h_t_1, Dtype* h_t) {
-	CUDA_KERNEL_LOOP(index, nthreads) {
-        const int n = index / H;
-		const int d = index % H;
-        input_pre_gate[n * 3 * H + 2 * H + d] += hidden_rt_pre_gate[index];
-		
-		// Yujie: Why use relu here ?
-        //input_pre_gate[n * 3 * H + 2 * H + d] = relu(input_pre_gate[n * 3 * H + 2 * H + d]);
-		input_pre_gate[n * 3 * H + 2 * H + d] = tanh(input_pre_gate[n * 3 * H + 2 * H + d]);
+__global__ void ActivationBackward(const int feature_dims, Dtype* conv_x_top_t_data, Dtype* conv_x_top_t_diff, 
+	Dtype* conv_h_top_data, Dtype* conv_h_top_diff, Dtype* Uh_h_data, Dtype* h_t_1_data, Dtype* h_t_1_diff, Dtype* h_t_diff) {
 
-        Dtype z_t = input_pre_gate[n * 3 * H + H + d];
-        h_t[index] = z_t * h_t_1[index] + (1 - z_t) * input_pre_gate[n * 3 * H + 2 * H + d];
-	}
-}
+	Dtype* Wr_x_t_data = conv_x_top_t_data + 0 * feature_dims;
+	Dtype* Wz_x_t_data = conv_x_top_t_data + 1 * feature_dims;
+	Dtype* Wh_x_t_data = conv_x_top_t_data + 2 * feature_dims;
 
-template <typename Dtype>
-__global__ void ActivationBackward(const int nthreads, const int H,
-	const Dtype* gate, Dtype* pre_gate_diff, Dtype* hidden_reset_,
-	const Dtype* h_t_1, Dtype* dh_t_1, const Dtype* dh_t,
-    Dtype* hidden_rt_pre_gate_diff) {
-	CUDA_KERNEL_LOOP(index, nthreads) {
-        const int n = index / H;
-		const int d = index % H;
-		
-        dh_t_1[index] += dh_t[index] * gate[n * 3 * H + H + d];
+	Dtype* Wr_x_t_diff = conv_x_top_t_diff + 0 * feature_dims;
+	Dtype* Wz_x_t_diff = conv_x_top_t_diff + 1 * feature_dims;
+	Dtype* Wh_x_t_diff = conv_x_top_t_diff + 2 * feature_dims;
 
-        pre_gate_diff[n * 3 * H + 2 * H + d] = dh_t[index] * (1 - gate[n * 3 * H + H + d]);
-		// Yujie : Why use relu here?
-		// pre_gate_diff[n * 3 * H + 2 * H + d] *= d_relu(gate[n * 3 * H + 2 * H + d]);
-		pre_gate_diff[n * 3 * H + 2 * H + d] *= d_tanh(gate[n * 3 * H + 2 * H + d]);
+	Dtype* Ur_h_t_1_data = conv_h_top_data + 0 * feature_dims;
+	Dtype* Uz_h_t_1_data = conv_h_top_data + 1 * feature_dims;
+	Dtype* Uh_h_t_1_data = conv_h_top_data + 2 * feature_dims;
 
-		pre_gate_diff[n * 3 * H + H + d] = dh_t[index] * (h_t_1[index] - gate[n * 3 * H + 2 * H + d]);
-		pre_gate_diff[n * 3 * H + H + d] *= d_hard_sigmoid(gate[n * 3 * H + H + d]);
+	Dtype* Ur_h_t_1_diff = conv_h_top_diff + 0 * feature_dims;
+	Dtype* Uz_h_t_1_diff = conv_h_top_diff + 1 * feature_dims;
+	Dtype* Uh_h_t_1_diff = conv_h_top_diff + 2 * feature_dims;
 
-	    hidden_reset_[index] = gate[n * 3 * H + d] * h_t_1[index];
+	CUDA_KERNEL_LOOP(d, feature_dims) {
+		// top_diff -> H[t-1]
+		h_t_1_diff[d] += h_t_diff[d] * (1 - Wz_x_t_data[d]);
 
-        hidden_rt_pre_gate_diff[index] = pre_gate_diff[n * 3 * H + 2 * H + d];
+		// top_diff -> Ht_candidate
+		Dtype h_candidate_diff = h_t_diff[d] * Wz_x_t_data[d];
+
+		// top_diff -> gate_z
+		Dtype gate_z_t_diff = h_t_diff[d] * (Wh_x_t_data[d] - h_t_1_data[d]);
+
+		// gate z -> Wz*X and Uz*H[t-1]
+		Wz_x_t_diff[d] = Uz_h_t_1_diff[d] = gate_z_t_diff * d_sigmoid(Wz_x_t_data[d]);
+
+		// h candidate -> Wh*X[t] and R[t] and Uh*H[t-1]
+		Wh_x_t_diff[d] = h_candidate_diff * d_tanh(Wh_x_t_data[d]);
+
+		Dtype gate_r_t_diff = Wh_x_t_diff[d] * Uh_h_data[d];
+		Uh_h_t_1_diff[d] = Wh_x_t_diff[d] * Wr_x_t_data[d];
+
+		// gate r -> Wr*X and Ur*H[t-1]
+		Wr_x_t_diff[d] = Ur_h_t_1_diff[d] = gate_r_t_diff * d_sigmoid(Wr_x_t_data[d]);
     }
 }
 
-template <typename Dtype>
-__global__ void SigmoidBackward(const int nthreads, const int H,
-	const Dtype* gate, Dtype* pre_gate_diff, const Dtype* h_t_1,
-    Dtype* dh_t_1, const Dtype* hidden_rt_diff, Dtype* hidden_pre_gate_diff) {
-	CUDA_KERNEL_LOOP(index, nthreads) {
-        const int n = index / H;
-		const int d = index % H;
-		
-        dh_t_1[index] += hidden_rt_diff[index] * gate[n * 3 * H + d];
-        pre_gate_diff[n * 3 * H + d] = hidden_rt_diff[index] * h_t_1[index];
-        pre_gate_diff[n * 3 * H + d] *= d_hard_sigmoid(gate[n * 3 * H + d]);
-
-        hidden_pre_gate_diff[n * 2 * H + d] = pre_gate_diff[n * 3 * H + d];
-        hidden_pre_gate_diff[n * 2 * H + H + d] = pre_gate_diff[n * 3 * H + H + d];
-    }
-}
 
 template <typename Dtype>
 void ConvGRULayer<Dtype>::Forward_gpu(const vector<Blob<Dtype>*>& bottom,
 	const vector<Blob<Dtype>*>& top) {
+	int feature_dims = num_output_ * spatial_dims_; // one input's size
 	Dtype* top_data = top[0]->mutable_gpu_data();
-
-	Dtype* input_pre_gate_data = input_pre_gate_.mutable_gpu_data();
-	Dtype* hidden_pre_gate_data = hidden_pre_gate_.mutable_gpu_data();
-	Dtype* hidden_rt_data = hidden_reset_.mutable_gpu_data();
-	Dtype* hidden_rt_pre_gate_data = hidden_rt_pre_gate_.mutable_gpu_data();
-	int feature_dims = H_ * spatial_dims;
-
-	// Initialize previous state
-	caffe_gpu_set(h_0_.count(), Dtype(0.), h_0_.mutable_gpu_data());
+	Dtype* conv_x_top_data = conv_x_top_blob_.mutable_gpu_data();
+	Dtype* conv_h_top_data = conv_h_top_blob_.mutable_gpu_data();
 
 	// Compute input to gate forward propagation
-	conv_input_layer_->Forward(conv_input_bottom_vec_, conv_input_top_vec_);
+	// W*Xt, Wz*Xt, Wr*Xt
+	conv_x_layer_->Forward(conv_x_bottom_vec_, conv_x_top_vec_);
+
+	// Initialize previous state
+	if (bottom.size() == 2)
+	{
+		h_0_.ShareData(*(bottom[1]));
+		h_0_.ShareDiff(*(bottom[1]));
+	}
+	else
+	{
+		caffe_gpu_set(h_0_.count(0), Dtype(0.), h_0_.mutable_gpu_data());
+	}
 
 	// Compute recurrent forward propagation
-	for (int tt = 0; tt < T_; ++tt) {
+	for (int tt = 0; tt < seq_len_; ++tt) {
 		int t = tt;
-		if (!forward_direction_) t = T_ - tt - 1;
 
-		Dtype* h_t = top_data + top[0]->count(1) * t;
-		Dtype* input_pre_gate_t = input_pre_gate_data + input_pre_gate_.count(1) * t;
+		Dtype* conv_x_top_t_data = conv_x_top_data + conv_x_top_blob_.offset(t);
 
-		Dtype* h_t_1 = t > 0 ? (h_t - top[0]->count(1)) : h_0_.mutable_gpu_data();
+		Dtype* h_t_data = top_data + top[0]->offset(t);
+		Dtype* h_t_1_data = t > 0 ? (top_data + top[0]->offset(t - 1)) : h_0_.mutable_gpu_data();
 
-		if (!forward_direction_){
-			h_t_1 = t < T_ - 1 ? (h_t + top[0]->count(1)) : h_0_.mutable_gpu_data();
-		}
+		conv_h_btm_blob_.data()->set_gpu_data(h_t_1_data);
+		// Ur*H[t-1], Uz*H[t-1], Uh*H[t-1]
+		conv_h_layer_->Forward(conv_h_bottom_vec_, conv_h_top_vec_);
 
-		// Hidden-to-hidden propagation
-		hidden_.data()->set_gpu_data(h_t_1);
-		conv_hidden_layer_->Forward(conv_hidden_bottom_vec_, conv_hidden_top_vec_);
+		Dtype* Uh_h_t_1_data = conv_h_top_data + 2 * feature_dims;
+		caffe_copy(feature_dims, Uh_h_t_1_data, Uh_h_.mutable_gpu_data() + Uh_h_.offset(t));
 
-        SigmoidForward<Dtype><<<CAFFE_GET_BLOCKS(N_ * feature_dims), CAFFE_CUDA_NUM_THREADS>>>(N_ * feature_dims, feature_dims,
-	        hidden_pre_gate_data, input_pre_gate_t, h_t_1, hidden_rt_data);
+		ActivationForward<Dtype> << <CAFFE_GET_BLOCKS(feature_dims), CAFFE_CUDA_NUM_THREADS >> >(
+			feature_dims, conv_x_top_t_data, conv_h_top_data, h_t_1_data, h_t_data);
 		CUDA_POST_KERNEL_CHECK;
-
-        conv_tmp_hidden_layer_->Forward(conv_tmp_hidden_bottom_vec_, conv_tmp_hidden_top_vec_);
-
-        ActivationForward<Dtype><<<CAFFE_GET_BLOCKS(N_ * feature_dims), CAFFE_CUDA_NUM_THREADS>>>(N_ * feature_dims, feature_dims,
-	        hidden_rt_pre_gate_data, input_pre_gate_t, h_t_1, h_t);
-		CUDA_POST_KERNEL_CHECK;
+	}
+	if (top.size() > 1)
+	{
+		caffe_copy(conv_x_top_blob_.count(0), conv_x_top_blob_.gpu_data(), top[1]->mutable_gpu_data());
 	}
 }
 
@@ -184,54 +173,45 @@ template <typename Dtype>
 void ConvGRULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
 	const vector<bool>& propagate_down,
 	const vector<Blob<Dtype>*>& bottom) {
-	const Dtype* gate_data = input_pre_gate_.gpu_data();
 
+	int feature_dims = num_output_ * spatial_dims_;
+	Dtype* top_data = top[0]->mutable_gpu_data();
 	Dtype* top_diff = top[0]->mutable_gpu_diff();
-	Dtype* pre_gate_diff = input_pre_gate_.mutable_gpu_diff();
-	Dtype* hidden_pre_gate_diff = hidden_pre_gate_.mutable_gpu_diff();
-	Dtype* hidden_rt_data = hidden_reset_.mutable_gpu_data();
-	Dtype* hidden_rt_pre_gate_diff = hidden_rt_pre_gate_.mutable_gpu_diff();
-	const Dtype* hidden_rt_diff = hidden_reset_.mutable_gpu_diff();
-	caffe_gpu_set(h_0_.count(), Dtype(0.), h_0_.mutable_gpu_diff());
 
-	int feature_dims = H_ * spatial_dims;
+	Dtype* conv_x_top_data = conv_x_top_blob_.mutable_gpu_data();
+	Dtype* conv_x_top_diff = conv_x_top_blob_.mutable_gpu_diff();
 
-	for (int tt = T_ - 1; tt >= 0; --tt) {
+	Dtype* conv_h_top_data = conv_h_top_blob_.mutable_gpu_data();
+	Dtype* conv_h_top_diff = conv_h_top_blob_.mutable_gpu_diff();
+
+	caffe_gpu_set(h_0_.count(0), Dtype(0.), h_0_.mutable_gpu_diff());
+
+	for (int tt = seq_len_ - 1; tt >= 0; --tt) {
 		int t = tt;
-		if (!forward_direction_) t = T_ - tt - 1;
 
-		Dtype* dh_t = top_diff + top[0]->count(1) * t;
-		Dtype* pre_gate_diff_t = pre_gate_diff + input_pre_gate_.count(1) * t;
-		const Dtype* gate_t = gate_data + input_pre_gate_.count(1) * t;
+		Dtype* conv_x_top_t_data = conv_x_top_data + conv_x_top_blob_.offset(t);
+		Dtype* conv_x_top_t_diff = conv_x_top_diff + conv_x_top_blob_.offset(t);
 
-		Dtype* dh_t_1 = t > 0 ? top_diff + top[0]->count(1) * (t - 1) : h_0_.mutable_gpu_diff();
-		Dtype* h_t_1 = t > 0 ? (top[0]->mutable_gpu_data() + top[0]->count(1) * (t - 1)) : h_0_.mutable_gpu_data();
-		if (!forward_direction_){
-			dh_t_1 = t < T_ - 1 ? top_diff + top[0]->count(1) * (t + 1) : h_0_.mutable_gpu_diff();
-			h_t_1 = t < T_ - 1 ? (top[0]->mutable_gpu_data() + top[0]->count(1) * (t + 1)) : h_0_.mutable_gpu_data();
-		}
+		Dtype* h_t_diff = top_diff + top[0]->offset(t);
 
-        ActivationBackward<Dtype><<<CAFFE_GET_BLOCKS(N_ * feature_dims), CAFFE_CUDA_NUM_THREADS>>>(
-            N_ * feature_dims, feature_dims, gate_t, pre_gate_diff_t, hidden_rt_data,
-            h_t_1, dh_t_1, dh_t, hidden_rt_pre_gate_diff);
-        CUDA_POST_KERNEL_CHECK;
+		Dtype* h_t_1_data = t > 0 ? top_data + top[0]->offset(t - 1) : h_0_.mutable_gpu_data();
+		Dtype* h_t_1_diff = t > 0 ? top_diff + top[0]->offset(t - 1) : h_0_.mutable_gpu_diff();
+		Dtype* Uh_h_data = Uh_h_.mutable_gpu_data() + Uh_h_.offset(t);
 
-        conv_tmp_hidden_layer_->Backward(conv_tmp_hidden_top_vec_, vector<bool>{true}, conv_tmp_hidden_bottom_vec_);
+		ActivationBackward<Dtype> << <CAFFE_GET_BLOCKS(feature_dims), CAFFE_CUDA_NUM_THREADS >> >(
+			feature_dims, conv_x_top_t_data, conv_x_top_t_diff, conv_h_top_data, conv_h_top_diff, Uh_h_data,
+			h_t_1_data, h_t_1_diff, h_t_diff);
+		CUDA_POST_KERNEL_CHECK;
 
-        SigmoidBackward<Dtype><<<CAFFE_GET_BLOCKS(N_ * feature_dims), CAFFE_CUDA_NUM_THREADS>>>
-        (N_ * feature_dims, feature_dims, gate_t, pre_gate_diff_t, h_t_1, dh_t_1, hidden_rt_diff, hidden_pre_gate_diff);
-        CUDA_POST_KERNEL_CHECK;
-
-		// Backprop errors to the previous time step
-		hidden_.data()->set_gpu_data(h_t_1);
-		conv_hidden_layer_->Backward(conv_hidden_top_vec_, vector<bool>{true}, conv_hidden_bottom_vec_);
-		const Dtype* hidden_diff_ = hidden_.gpu_diff();
-		caffe_gpu_add<Dtype>(N_ * feature_dims, dh_t_1, hidden_diff_, dh_t_1);
+		conv_h_btm_blob_.data()->set_gpu_data(h_t_1_data);
+		conv_h_layer_->Backward(conv_h_top_vec_, vector<bool>{true}, conv_h_bottom_vec_);
+		const Dtype* hidden_diff_ = conv_h_btm_blob_.gpu_diff();
+		caffe_gpu_add<Dtype>(feature_dims, h_t_1_diff, hidden_diff_, h_t_1_diff);
 	}
-
-	// Gradient w.r.t. bottom data
-	conv_input_layer_->Backward(conv_input_top_vec_, vector<bool>{propagate_down[0]}, conv_input_bottom_vec_);
-
+	// Gradient w.r.t. bottom data 
+	// accumulated all diff from input_pre_gate(conv) -> btm data
+	// At the same time, calc all gradient for Wr, Wz, W
+	conv_x_layer_->Backward(conv_x_top_vec_, vector<bool>{propagate_down[0]}, conv_x_bottom_vec_);
 }
 
 INSTANTIATE_LAYER_GPU_FUNCS(ConvGRULayer);

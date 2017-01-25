@@ -36,7 +36,7 @@ namespace caffe {
 
 	template <typename Dtype>
 	__global__ void ActivationForward(const int featmap_dim, Dtype* gate_i_t_data, Dtype* gate_f_t_data,
-		Dtype* gate_c_t_data, Dtype* gate_o_t_data, const Dtype* X_w_t, Dtype* H_w_t_1, Dtype* wc_data, Dtype* C_t_1,
+		Dtype* gate_c_t_data, Dtype* gate_o_t_data, Dtype* tanh_data, const Dtype* X_w_t, Dtype* H_w_t_1, Dtype* C_t_1,
 		Dtype* H_t) {
 
 		CUDA_KERNEL_LOOP(i, featmap_dim) {
@@ -51,24 +51,20 @@ namespace caffe {
 			Dtype* h_wc_t_1 = H_w_t_1 + featmap_dim * 2;
 			Dtype* h_wo_t_1 = H_w_t_1 + featmap_dim * 3;
 
-			Dtype* wci_data = wc_data;
-			Dtype* wcf_data = wc_data + featmap_dim;
-			Dtype* wco_data = wc_data + featmap_dim * 2;
-			gate_i_t_data[i] = x_wi_t[i] + h_wi_t_1[i] + (C_t_1[i] * wci_data[i]);
-			gate_f_t_data[i] = x_wf_t[i] + h_wf_t_1[i] + (C_t_1[i] * wcf_data[i]);
-			gate_c_t_data[i] = Sigmoid_gpu(gate_f_t_data[i]) * C_t_1[i]
-				+ Sigmoid_gpu(gate_i_t_data[i]) * Tanh_gpu(x_wc_t[i] + h_wc_t_1[i]);
-			gate_o_t_data[i] = x_wo_t[i] + h_wo_t_1[i] + (wco_data[i] * gate_c_t_data[i]);
-			H_t[i] = Sigmoid_gpu(gate_o_t_data[i]) * Tanh_gpu(gate_c_t_data[i]);
+			gate_i_t_data[i] = Sigmoid_gpu(x_wi_t[i] + h_wi_t_1[i]);
+			gate_f_t_data[i] = Sigmoid_gpu(x_wf_t[i] + h_wf_t_1[i]);
+			gate_o_t_data[i] = Sigmoid_gpu(x_wo_t[i] + h_wo_t_1[i]);
+			tanh_data[i] = Tanh_gpu(x_wc_t[i] + h_wc_t_1[i]);
+			gate_c_t_data[i] = gate_f_t_data[i] * C_t_1[i]
+				+ gate_i_t_data[i] * tanh_data[i];
+			H_t[i] = gate_o_t_data[i] * Tanh_gpu(gate_c_t_data[i]);
 		}
 	}
 
 	template <typename Dtype>
 	__global__ void ActivationBackward(const int featmap_dim, Dtype* gate_i_t_data, Dtype* gate_f_t_data,
 		Dtype* gate_c_t_data, Dtype* gate_o_t_data, Dtype* gate_i_t_diff, Dtype* gate_f_t_diff, Dtype* gate_c_t_diff,
-		Dtype* gate_o_t_diff, Dtype* H_t_diff, Dtype* H_w_t_1_diff, Dtype* X_w_t_diff, Dtype* wc_diff,
-		Dtype* x_wc_t_data, Dtype* H_w_t_1_data, Dtype* conv_h_top_t_data, Dtype* wc_data, Dtype* C_t_1_diff,
-		Dtype* C_t_1_data) {
+		Dtype* gate_o_t_diff, Dtype* H_t_diff, Dtype* H_w_t_1_diff, Dtype* X_w_t_diff, Dtype* tanh_data, Dtype* C_t_1_diff, Dtype* C_t_1_data) {
 
 		Dtype* x_wi_t_diff = X_w_t_diff;
 		Dtype* x_wf_t_diff = X_w_t_diff + featmap_dim * 1;
@@ -80,40 +76,25 @@ namespace caffe {
 		Dtype* h_wc_t_1_diff = H_w_t_1_diff + featmap_dim * 2;
 		Dtype* h_wo_t_1_diff = H_w_t_1_diff + featmap_dim * 3;
 
-		Dtype* h_wc_t_1_data = H_w_t_1_data + featmap_dim * 2;
-
-		Dtype* wci_data = wc_data;
-		Dtype* wcf_data = wc_data + featmap_dim;
-		Dtype* wco_data = wc_data + featmap_dim * 2;
-		Dtype* wci_diff = wc_diff;
-		Dtype* wcf_diff = wc_diff + featmap_dim;
-		Dtype* wco_diff = wc_diff + featmap_dim * 2;
 		CUDA_KERNEL_LOOP(i, featmap_dim) {
-			gate_o_t_diff[i] = H_t_diff[i] * d_Sigmoid_gpu(Sigmoid_gpu(gate_o_t_data[i])) * Tanh_gpu(gate_c_t_data[i]);
-			gate_c_t_diff[i] = H_t_diff[i] * Sigmoid_gpu(gate_o_t_data[i]) * d_Tanh_gpu(Tanh_gpu(gate_c_t_data[i]));
-			H_w_t_1_data[i] = conv_h_top_t_data[i];
-			x_wo_t_diff[i] = gate_o_t_diff[i];
-			h_wo_t_1_diff[i] = gate_o_t_diff[i];
+			gate_o_t_diff[i] = H_t_diff[i] * Tanh_gpu(gate_c_t_data[i]);
+			gate_c_t_diff[i] += H_t_diff[i] * gate_o_t_data[i] * d_Tanh_gpu(gate_c_t_data[i]);
 
-			gate_c_t_diff[i] += gate_o_t_diff[i] * wco_data[i];
-			wco_diff[i] += gate_o_t_diff[i] * gate_c_t_data[i];
+			x_wo_t_diff[i] = gate_o_t_diff[i] * d_Sigmoid_gpu(gate_o_t_data[i]);
+			h_wo_t_1_diff[i] = x_wo_t_diff[i];
 
-			gate_f_t_diff[i] = gate_c_t_diff[i] * C_t_1_data[i] * d_Sigmoid_gpu(Sigmoid_gpu(gate_f_t_data[i]));
-			C_t_1_diff[i] = gate_c_t_diff[i] * Sigmoid_gpu(gate_f_t_data[i]);
-			gate_i_t_diff[i] = gate_c_t_diff[i] * d_Sigmoid_gpu(Sigmoid_gpu(gate_i_t_data[i])) * Tanh_gpu(x_wc_t_data[i] + h_wc_t_1_data[i]);
-			x_wc_t_diff[i] = gate_c_t_diff[i] * Sigmoid_gpu(gate_i_t_data[i]) * d_Tanh_gpu(Tanh_gpu(x_wc_t_data[i] + h_wc_t_1_data[i]));
 
+			gate_f_t_diff[i] = gate_c_t_diff[i] * C_t_1_data[i];
+			C_t_1_diff[i] = gate_c_t_diff[i] * gate_f_t_data[i];
+			gate_i_t_diff[i] = gate_c_t_diff[i] * tanh_data[i];
+			x_wc_t_diff[i] = gate_c_t_diff[i] * gate_i_t_data[i] * d_Tanh_gpu(tanh_data[i]);
 			h_wc_t_1_diff[i] = x_wc_t_diff[i];
 
-			x_wi_t_diff[i] = gate_i_t_diff[i];
-			h_wi_t_1_diff[i] = gate_i_t_diff[i];
+			x_wi_t_diff[i] = gate_i_t_diff[i] * d_Sigmoid_gpu(gate_i_t_data[i]);;
+			h_wi_t_1_diff[i] = x_wi_t_diff[i];
 
-			x_wf_t_diff[i] = gate_f_t_diff[i];
-			h_wf_t_1_diff[i] = gate_f_t_diff[i];
-
-			C_t_1_diff[i] += gate_i_t_diff[i] * wci_data[i] + gate_f_t_diff[i] * wcf_data[i];
-			wci_diff[i] += gate_i_t_diff[i] * C_t_1_data[i];
-			wcf_diff[i] += gate_f_t_diff[i] * C_t_1_data[i];
+			x_wf_t_diff[i] = gate_f_t_diff[i] * d_Sigmoid_gpu(gate_f_t_data[i]);
+			h_wf_t_1_diff[i] = x_wf_t_diff[i];
 		}
 	}
 
@@ -124,8 +105,8 @@ namespace caffe {
 		Dtype* top_data = top[0]->mutable_gpu_data();
 		int featmap_dim = spatial_dims_ * num_output_;
 
-		caffe_gpu_set<Dtype>(H_0_.count(), Dtype(0.), H_0_.mutable_gpu_data());
-		caffe_gpu_set<Dtype>(C_0_.count(), Dtype(0.), C_0_.mutable_gpu_data());
+		caffe_gpu_set<Dtype>(H_0_.count(0), Dtype(0.), H_0_.mutable_gpu_data());
+		caffe_gpu_set<Dtype>(C_0_.count(0), Dtype(0.), C_0_.mutable_gpu_data());
 
 		// For all input X: X[t] -> Wxi*X[t], Wxf*X[t], Wxc*X[t], Wxo*X[t] in conv_x_top_blob_
 		conv_x_layer_->Forward(conv_x_btm_vec_, conv_x_top_vec_);
@@ -147,16 +128,12 @@ namespace caffe {
 			conv_h_btm_blob_.data()->set_gpu_data(H_t_1);
 			conv_h_layer_->Forward(conv_h_btm_vec_, conv_h_top_vec_);
 
-			// cache Whc*H[t-1] for backward
-			Dtype* wh_data = conv_h_top_t_.mutable_gpu_data() + conv_h_top_t_.offset(t);
-			caffe_gpu_memcpy(conv_h_top_blob_.count(), H_w_t_1, wh_data);
-
 			Dtype* C_t_1 = t == 0 ? C_0_.mutable_gpu_data() : gate_c_t_data - gate_c_.count(1);
-			Dtype* wc_data = Wc_.mutable_gpu_data();
+			Dtype* tanh_data = gate_c_tanh_.mutable_cpu_data() + gate_c_tanh_.offset(t);
 
 			ActivationForward<Dtype> << <CAFFE_GET_BLOCKS(featmap_dim), CAFFE_CUDA_NUM_THREADS >> >
-				(featmap_dim, gate_i_t_data, gate_f_t_data, gate_c_t_data, gate_o_t_data,
-				X_w_t, H_w_t_1, wc_data, C_t_1, H_t);
+				(featmap_dim, gate_i_t_data, gate_f_t_data, gate_c_t_data, gate_o_t_data, tanh_data,
+				X_w_t, H_w_t_1, C_t_1, H_t);
 			CUDA_POST_KERNEL_CHECK;
 
 		}
@@ -170,8 +147,12 @@ namespace caffe {
 		Dtype* top_data = top[0]->mutable_gpu_data();
 		int featmap_dim = spatial_dims_ * num_output_;
 
-		caffe_gpu_set<Dtype>(H_0_.count(), Dtype(0.), H_0_.mutable_gpu_diff());
-		caffe_gpu_set<Dtype>(C_0_.count(), Dtype(0.), C_0_.mutable_gpu_diff());
+		caffe_gpu_set<Dtype>(H_0_.count(0), Dtype(0.), H_0_.mutable_gpu_diff());
+		caffe_gpu_set<Dtype>(C_0_.count(0), Dtype(0.), C_0_.mutable_gpu_diff());
+		//caffe_gpu_set<Dtype>(gate_i_.count(0), Dtype(0.), gate_i_.mutable_gpu_diff());
+		//caffe_gpu_set<Dtype>(gate_f_.count(0), Dtype(0.), gate_f_.mutable_gpu_diff());
+		caffe_gpu_set<Dtype>(gate_c_.count(0), Dtype(0.), gate_c_.mutable_gpu_diff());
+		//caffe_gpu_set<Dtype>(gate_o_.count(0), Dtype(0.), gate_o_.mutable_gpu_diff());
 
 		for (int t = seq_len_ - 1; t >= 0; --t)
 		{
@@ -188,23 +169,15 @@ namespace caffe {
 			Dtype* H_t_diff = top_diff + top[0]->offset(t);
 			Dtype* H_w_t_1_diff = conv_h_top_blob_.mutable_gpu_diff();
 			Dtype* X_w_t_diff = conv_x_top_blob_.mutable_gpu_data() + conv_x_top_blob_.offset(t);
-			Dtype* wc_diff = Wc_.mutable_gpu_diff();
-
-			Dtype* X_w_t_data = conv_x_top_blob_.mutable_gpu_data() + conv_x_top_blob_.offset(t);
-			Dtype* x_wc_t_data = X_w_t_data + featmap_dim * 2;
-
-			Dtype* H_w_t_1_data = conv_h_top_blob_.mutable_gpu_data();
-			Dtype* conv_h_top_t_data = conv_h_top_t_.mutable_gpu_data() + conv_h_top_t_.offset(t);
-			Dtype* wc_data = Wc_.mutable_gpu_data();
 
 			Dtype* C_t_1_diff = t == 0 ? C_0_.mutable_gpu_diff() : gate_c_t_diff - gate_c_.count(1);
 			Dtype* C_t_1_data = t == 0 ? C_0_.mutable_gpu_data() : gate_c_t_data - gate_c_.count(1);
+			Dtype* tanh_data = gate_c_tanh_.mutable_cpu_data() + gate_c_tanh_.offset(t);
 
 			ActivationBackward<Dtype> << <CAFFE_GET_BLOCKS(featmap_dim), CAFFE_CUDA_NUM_THREADS >> >
 				(featmap_dim, gate_i_t_data, gate_f_t_data, gate_c_t_data, gate_o_t_data,
 				gate_i_t_diff, gate_f_t_diff, gate_c_t_diff, gate_o_t_diff,
-				H_t_diff, H_w_t_1_diff, X_w_t_diff, wc_diff, x_wc_t_data, H_w_t_1_data, conv_h_top_t_data,
-				wc_data, C_t_1_diff, C_t_1_data);
+				H_t_diff, H_w_t_1_diff, X_w_t_diff, tanh_data, C_t_1_diff, C_t_1_data);
 			CUDA_POST_KERNEL_CHECK;
 
 			Dtype* H_t_1_diff = t == 0 ? H_0_.mutable_gpu_diff() : top_diff + top[0]->offset(t - 1);
@@ -215,7 +188,7 @@ namespace caffe {
 
 			// add conv_btm_blob to H[t-1] diff
 			const Dtype* conv_h_t_1_diff = conv_h_btm_blob_.gpu_diff();
-			caffe_gpu_add<Dtype>(conv_h_btm_blob_.count(), H_t_1_diff, conv_h_t_1_diff, H_t_1_diff);
+			caffe_gpu_add<Dtype>(conv_h_btm_blob_.count(0), H_t_1_diff, conv_h_t_1_diff, H_t_1_diff);
 		}
 		conv_x_layer_->Backward(conv_x_top_vec_, vector<bool>{propagate_down[0]}, conv_x_btm_vec_);
 	}

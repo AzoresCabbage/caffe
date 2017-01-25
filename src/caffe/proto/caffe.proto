@@ -636,11 +636,12 @@ message ConvRNNParameter {
 	// true for channel wise convolution
 	optional bool channelwise = 1 [default = false];
 	
-	// H[t] = activation(conv(X[t]) + conv(H[t-1]))
 	optional FillerParameter x_weight_filler = 2;
 	optional FillerParameter x_bias_filler = 3;
 	optional FillerParameter h_weight_filler = 4;
 	optional FillerParameter h_bias_filler = 5;
+	optional FillerParameter y_weight_filler = 8;
+	optional FillerParameter y_bias_filler = 9;
 
 	optional int32 num_output = 6;
 
@@ -650,9 +651,6 @@ message ConvRNNParameter {
 		RELU = 2;
 	}
 	optional Activation act_type = 7 [default = DEFAULT];
-
-	// warp the feature map between time
-	optional bool warping = 8 [default = false];
 }
 
 message CenterLossParameter {
