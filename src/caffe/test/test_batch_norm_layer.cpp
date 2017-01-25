@@ -18,7 +18,7 @@
 namespace caffe {
 
   template <typename TypeParam>
-  class BatchNormLayerTest : public MultiDeviceTest<TypeParam> {
+  class BatchNormLayerTest : public CPUDeviceTest<TypeParam> {
     typedef typename TypeParam::Dtype Dtype;
    protected:
     BatchNormLayerTest()

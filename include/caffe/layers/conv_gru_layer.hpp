@@ -8,6 +8,8 @@
 #include "caffe/proto/caffe.pb.h"
 
 #include "caffe/layers/conv_layer.hpp"
+#include "caffe\layers\batch_norm_layer.hpp"
+#include "caffe\layers\scale_layer.hpp"
 
 namespace caffe {
 
@@ -36,12 +38,12 @@ namespace caffe {
 	protected:
 		virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 			const vector<Blob<Dtype>*>& top);
-		virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
-			const vector<Blob<Dtype>*>& top);
+		//virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+		//	const vector<Blob<Dtype>*>& top);
 		virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
 			const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
-		virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-			const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+		//virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+		//	const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
 		int seq_len_; // length of sequence
 		int num_output_; // num of hidden units channels
@@ -65,6 +67,21 @@ namespace caffe {
 		vector<Blob<Dtype>*> conv_h_top_vec_;
 
 		Blob<Dtype> Uh_h_;
+
+		bool BN_term;
+		shared_ptr<BatchNormLayer<Dtype>> batch_norm_x_layer_;
+		vector<Blob<Dtype>*> batch_norm_x_btm_vec_;
+		vector<Blob<Dtype>*> batch_norm_x_top_vec_;
+		shared_ptr<ScaleLayer<Dtype>> scale_x_layer_;
+		vector<Blob<Dtype>*> scale_x_btm_vec_;
+		vector<Blob<Dtype>*> scale_x_top_vec_;
+		
+		shared_ptr<BatchNormLayer<Dtype>> batch_norm_h_layer_;
+		vector<Blob<Dtype>*> batch_norm_h_btm_vec_;
+		vector<Blob<Dtype>*> batch_norm_h_top_vec_;
+		shared_ptr<ScaleLayer<Dtype>> scale_h_layer_;
+		vector<Blob<Dtype>*> scale_h_btm_vec_;
+		vector<Blob<Dtype>*> scale_h_top_vec_;
 	};
 
 }  // namespace caffe

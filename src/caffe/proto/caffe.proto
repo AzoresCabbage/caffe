@@ -803,6 +803,7 @@ message ConvGRUParameter {
   optional FillerParameter weight_filler = 3; // The filler for weight
   optional FillerParameter bias_filler = 4; // The filler for the bias
   optional bool forward_direction = 5 [default = true]; //used for bidirectional rnn
+  optional bool BN_term = 6 [default = false];
 }
 
 // Message that stores parameters used by HDF5DataLayer
