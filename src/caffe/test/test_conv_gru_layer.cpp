@@ -110,7 +110,7 @@ namespace caffe {
 //			LOG(ERROR) << "Skipping test due to old architecture.";
 //		}
 //	}
-
+//
 	TYPED_TEST(GRULayerTest, TestBNDefault) {
 		typedef typename TypeParam::Dtype Dtype;
 		bool IS_VALID_CUDA = false;
@@ -121,7 +121,7 @@ namespace caffe {
 			sizeof(Dtype) == 4 || IS_VALID_CUDA) {
 			LayerParameter layer_param;
 			ConvGRUParameter* gru_parm = layer_param.mutable_conv_gru_param();
-			gru_parm->set_num_output(1);
+			gru_parm->set_num_output(3);
 			gru_parm->set_bn_term(true);
 			ScaleParameter* scale_param = layer_param.mutable_scale_param();
 			scale_param->set_bias_term(true);
@@ -131,10 +131,12 @@ namespace caffe {
 			BatchNormParameter* batch_param = layer_param.mutable_batch_norm_param();
 			batch_param->set_moving_average_fraction(1);
 			ConvolutionParameter* conv_param = layer_param.mutable_convolution_param();
-			conv_param->add_kernel_size(3);
-			conv_param->mutable_weight_filler()->set_type("msra");
+			conv_param->add_kernel_size(1);
+			conv_param->mutable_weight_filler()->set_type("constant");
+			conv_param->mutable_weight_filler()->set_value(1);
 			//conv_param->mutable_weight_filler()->set_min(-0.01);
 			//conv_param->mutable_weight_filler()->set_max(0.01);
+			conv_param->set_group(3);
 			conv_param->mutable_bias_filler()->set_type("constant");
 			conv_param->mutable_bias_filler()->set_value(0);
 			conv_param->add_pad(1);
